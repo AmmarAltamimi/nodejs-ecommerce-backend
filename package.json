@@ -1,8 +1,9 @@
 {
   "name": "nodejs-ecommerce-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "service.js",
   "scripts": {
+    "start": "node service.js",
     "start:dev": "nodemon service.js",
     "start:prod": "NODE_ENV=production  node service.js"
   },
