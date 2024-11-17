@@ -1,0 +1,23 @@
+[
+    { "name": "Electronics", "slug": "electronics" },
+    { "name": "Fashion", "slug": "fashion" },
+    { "name": "Home Decor", "slug": "home-decor" },
+    { "name": "Sports Equipment", "slug": "sports-equipment" },
+    { "name": "Books", "slug": "books" },
+    { "name": "Toys", "slug": "toys" },
+    { "name": "Groceries", "slug": "groceries" },
+    { "name": "Automotive", "slug": "automotive" },
+    { "name": "Health & Beauty", "slug": "health-beauty" },
+    { "name": "Gaming", "slug": "gaming" },
+    { "name": "Furniture", "slug": "furniture" },
+    { "name": "Jewelry", "slug": "jewelry" },
+    { "name": "Gardening", "slug": "gardening" },
+    { "name": "Pet Supplies", "slug": "pet-supplies" },
+    { "name": "Appliances", "slug": "appliances" },
+    { "name": "Baby Products", "slug": "baby-products" },
+    { "name": "Art Supplies", "slug": "art-supplies" },
+    { "name": "Stationery", "slug": "stationery" },
+    { "name": "Travel", "slug": "travel" },
+    { "name": "Outdoor Gear", "slug": "outdoor-gear" }
+  ]
+  

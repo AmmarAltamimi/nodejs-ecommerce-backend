@@ -1,0 +1,22 @@
+[
+  { "name": "Smartphones", "slug": "smartphones", "category": "6729fdf275fb8659b2ef557b" },
+  { "name": "Laptops", "slug": "laptops", "category": "6729fdf275fb8659b2ef557b" },
+  { "name": "Men's Clothing", "slug": "mens-clothing", "category": "6729fdf275fb8659b2ef557c" },
+  { "name": "Women's Clothing", "slug": "womens-clothing", "category": "6729fdf275fb8659b2ef557c" },
+  { "name": "Living Room Furniture", "slug": "living-room-furniture", "category": "6729fdf275fb8659b2ef557d" },
+  { "name": "Bedroom Furniture", "slug": "bedroom-furniture", "category": "6729fdf275fb8659b2ef557d" },
+  { "name": "Exercise Equipment", "slug": "exercise-equipment", "category": "6729fdf275fb8659b2ef557e" },
+  { "name": "Outdoor Sports", "slug": "outdoor-sports", "category": "6729fdf275fb8659b2ef557e" },
+  { "name": "Fiction Books", "slug": "fiction-books", "category": "6729fdf275fb8659b2ef557f" },
+  { "name": "Non-Fiction Books", "slug": "non-fiction-books", "category": "6729fdf275fb8659b2ef557f" },
+  { "name": "Board Games", "slug": "board-games", "category": "6729fdf275fb8659b2ef5580" },
+  { "name": "Puzzles", "slug": "puzzles", "category": "6729fdf275fb8659b2ef5580" },
+  { "name": "Skincare", "slug": "skincare", "category": "6729fdf275fb8659b2ef557b" },
+  { "name": "Makeup", "slug": "makeup", "category": "6729fdf275fb8659b2ef557b" },
+  { "name": "Gardening Tools", "slug": "gardening-tools", "category": "6729fdf275fb8659b2ef557d" },
+  { "name": "Plants", "slug": "plants", "category": "6729fdf275fb8659b2ef557d" },
+  { "name": "Pet Food", "slug": "pet-food", "category": "6729fdf275fb8659b2ef557e" },
+  { "name": "Pet Toys", "slug": "pet-toys", "category": "6729fdf275fb8659b2ef557e" },
+  { "name": "Kitchen Appliances", "slug": "kitchen-appliances", "category": "6729fdf275fb8659b2ef5580" },
+  { "name": "Vacuum Cleaners", "slug": "vacuum-cleaners", "category": "6729fdf275fb8659b2ef5580" }
+]

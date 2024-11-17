@@ -1,0 +1,23 @@
+[
+    { "name": "Apple", "slug": "apple" },
+    { "name": "Samsung", "slug": "samsung" },
+    { "name": "Nike", "slug": "nike" },
+    { "name": "Adidas", "slug": "adidas" },
+    { "name": "Sony", "slug": "sony" },
+    { "name": "LG", "slug": "lg" },
+    { "name": "Huawei", "slug": "huawei" },
+    { "name": "Puma", "slug": "puma" },
+    { "name": "Coca-Cola", "slug": "coca-cola" },
+    { "name": "Pepsi", "slug": "pepsi" },
+    { "name": "Microsoft", "slug": "microsoft" },
+    { "name": "Google", "slug": "google" },
+    { "name": "Amazon", "slug": "amazon" },
+    { "name": "Tesla", "slug": "tesla" },
+    { "name": "Under Armour", "slug": "under-armour" },
+    { "name": "Reebok", "slug": "reebok" },
+    { "name": "Fender", "slug": "fender" },
+    { "name": "Canon", "slug": "canon" },
+    { "name": "Nikon", "slug": "nikon" },
+    { "name": "Bose", "slug": "bose" }
+  ]
+  
