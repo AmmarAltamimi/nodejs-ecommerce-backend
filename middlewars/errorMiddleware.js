@@ -9,7 +9,7 @@ const sendErrorForProd = (err,res)=>  res.status(err.stateCode).json({status:err
 
 exports.globalError = (err,req,res,next)=>{
     err.stateCode = err.stateCode || 500;
-    err.status = err.stateCode || "error";
+    err.status = err.status || "error";
     if (err.name === 'JsonWebTokenError') err = new ApiError('Invalid token, please login again..', 401);
     if (err.name === 'TokenExpiredError') err = new ApiError('Expired token, please login again..', 401);   
     if(process.env.NODE_ENV === "development" ){
