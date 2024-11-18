@@ -31,7 +31,7 @@ exports.getOrders = getAll(Order);
 exports.getOrder = getOne(Order);
 
 
-exports.createCashOrder =asyncHandler(async(req,res,next)=>{
+exports.createCashOrder = asyncHandler(async(req,res,next)=>{
     const {shippingAddress} = req.body
     const {cartId} = req.params
 
@@ -56,16 +56,12 @@ exports.createCashOrder =asyncHandler(async(req,res,next)=>{
 
     if(createOrder){
 
-        const bulkOption = cart.cartItem.map((item)=>{
-            
-            return {
+        const bulkOption = cart.cartItem.map((item)=>({
                 updateOne:{
                     filter:{_id:item.product},
                     update:{$inc:{count:-item.quantity,sold:+item.quantity}},
                 }
-            }
-         
-        })
+            }))
         await Product.bulkWrite(bulkOption,{})
 
 
@@ -152,6 +148,67 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
   });
   
 
+  const createCardOrder = async (session)=> asyncHandler(async(req,res,next)=>{
+    const {client_reference_id:cartId,metadata:shippingAddress,amount_total:totalOrderPrice } = session
 
+    const cart = await Cart.findById(cartId)
+    if(!cart){
+        return next(new ApiError(`Cart not found with id ${cartId}`,404))
+    }
+
+
+    const createOrder = await Order.create({
+        user : req.user._id,
+        cartItems:cart.cartItem,
+        paymentMethodType : "card",
+        isPaid:true,
+        paidAt : Date.now(),
+        shippingAddress : shippingAddress,
+        totalOrderPrice : totalOrderPrice /100
+
+    })
+
+    if(createOrder){
+
+        const bulkOption = cart.cartItem.map((item)=>({
+                updateOne:{
+                    filter:{_id:item.product},
+                    update:{$inc:{count:-item.quantity,sold:+item.quantity}},
+                }
+            }))
+        await Product.bulkWrite(bulkOption,{})
+
+
+        // clear cart 
+        await Cart.findByIdAndDelete(cartId)
+
+    }
+
+    res.status(200).json({ received: true });
+  });
+
+
+  exports.webhookCheckout = asyncHandler(async (req, res, next) => {
+    const sig = req.headers['stripe-signature'];
+  
+    let event;
+  
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    if (event.type === 'checkout.session.completed') {
+      //  Create order
+      createCardOrder(event.data.object);
+    }
+  
+    res.status(200).json({ received: true });
+  });
+  
 
 

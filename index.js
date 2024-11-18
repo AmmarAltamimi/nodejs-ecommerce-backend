@@ -30,6 +30,7 @@ const addressRouter = require("./routes/addressRoute")
 const reviewRouter = require("./routes/reviewRoute")
 const cartRouter = require("./routes/cartRouter")
 const orderRouter = require("./routes/orderRoute")
+const { webhookCheckout } = require('./services/orderService');
 
 
 const ApiError = require(`./utils/apiError`);
@@ -46,6 +47,13 @@ app.options('*', cors());
 // compress all responses
 app.use(compression());
 
+
+// Checkout webhook
+app.post(
+    '/webhook-checkout',
+    express.raw({ type: 'application/json' }),
+    webhookCheckout
+  );
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'uploads')));
