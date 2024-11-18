@@ -204,6 +204,7 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
     }
     if (event.type === 'checkout.session.completed') {
       //  Create order
+      console.log("here")
       createCardOrder(event.data.object);
     }
   

@@ -8,7 +8,8 @@ exports.getAll =  (Model)=> asyncHandler(async(req,res)=>{
         if(req.filterObj){
             filter = req.filterObj;
         }
-    
+        console.log("here")
+
         const documentsCounts = await Model.countDocuments();
         const Query =  Model.find(filter)
     
