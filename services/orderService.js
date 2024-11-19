@@ -110,7 +110,7 @@ exports.updateOrderToDelivered =asyncHandler(async(req,res,next)=>{
 exports.checkoutSession = asyncHandler(async (req, res, next) => {
     const {cartId} = req.params
     const {shippingAddress} = req.body
-
+    console.log("ammar");
     const cart = await Cart.findById(cartId)
     if(!cart){
         return next(new ApiError(`Cart not found with id ${cartId}`,404))
