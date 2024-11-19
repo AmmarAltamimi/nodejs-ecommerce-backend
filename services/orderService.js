@@ -147,13 +147,13 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
   });
   
 
-  const createCardOrder = async (session)=>  {
+  const createCardOrder = async (session,req,res,next)=>  {
     const {client_reference_id:cartId,metadata:shippingAddress,amount_total:totalOrderPrice } = session
 
     const cart = await Cart.findById(cartId)
-    // if(!cart){
-    //     return next(new ApiError(`Cart not found with id ${cartId}`,404))
-    // }
+    if(!cart){
+        return next(new ApiError(`Cart not found with id ${cartId}`,404))
+    }
 
     const user = await User.findOne({ email: session.customer_email });
 
@@ -184,6 +184,8 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
         await Cart.findByIdAndDelete(cartId)
 
     }
+    res.status(200).json({ received: true });
+
   };
 
   exports.webhookCheckout = asyncHandler(async (req, res, next) => {
@@ -202,11 +204,10 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
     }
     if (event.type === 'checkout.session.completed') {
       //  Create order
-      createCardOrder(event.data.object);
+      createCardOrder(event.data.object,req,res,next);
       
     }
   
-    res.status(200).json({ received: true });
 
    
   });
