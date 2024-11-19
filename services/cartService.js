@@ -38,6 +38,7 @@ exports.addProductToCart = asyncHandler(async(req,res,next)=>{
             }]
        })
     }
+    console.log(cart)
 
     const findIndex = cart.cartItem.findIndex((item)=> item.product.toString() === req.body.product );
     if(findIndex > -1){
