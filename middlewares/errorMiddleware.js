@@ -6,7 +6,7 @@ const sendErrorForDev = (err,res)=> res.status(err.stateCode).json({status:err.s
 const sendErrorForProd = (err,res)=>  res.status(err.stateCode).json({status:err.status,message:err.message});
 
 
-
+// Global error handler middleware to process errors
 exports.globalError = (err,req,res,next)=>{
     err.stateCode = err.stateCode || 500;
     err.status = err.status || "error";

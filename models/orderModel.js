@@ -1,95 +1,106 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-
-
-const orderSchema = new mongoose.Schema({
-
-    user : {
-        type: mongoose.Schema.ObjectId,
-        ref:"User",
-        required:[true,"user required"],
+const orderSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "user required"],
     },
-    cartItems : [{
-        product : {
-            type: mongoose.Schema.ObjectId,
-            ref:"Product",
-            required:[true,"product required"],
+    cartItems: [
+      {
+        product: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Product",
+          required: [true, "product required"],
         },
-        quantity :{
-            type:Number,
+        quantity: {
+          type: Number,
         },
-        price:{
-            type:Number,
-        }
-    }],
+        price: {
+          type: Number,
+        },
+      },
+    ],
 
-    shippingAddress :{
-        alias : {
-            type:String,
-            required: [true,"address alias required"],
-            minlength:[2,"too short address alias"],
-            maxlength:[10,"too long address alias"],
-        },
-        details : {
-            type:String,
-            required: [true,"address details required"],
-            minlength:[2,"too short address details"],
-            maxlength:[256,"too long address details"],
-        },
-        phone:{
-            type:String,
-            required: [true,"phone number required"],
-        },
-        city : {
-            type:String,
-            required: [true,"city required"],
-            minlength:[2,"too short city"],
-            maxlength:[32,"too long city"],
-        },
-        postalCode : {
-            type:String,
-            required: [true,"postal code required"],
-            minlength:[5,"too short postal code"],
-            maxlength:[10,"too long postal code"],
-        }
-
+    shippingAddress: {
+      alias: {
+        type: String,
+        required: [true, "address alias required"],
+        minlength: [2, "too short address alias"],
+        maxlength: [10, "too long address alias"],
+      },
+      details: {
+        type: String,
+        required: [true, "address details required"],
+        minlength: [2, "too short address details"],
+        maxlength: [256, "too long address details"],
+      },
+      phone: {
+        type: String,
+        required: [true, "phone number required"],
+      },
+      city: {
+        type: String,
+        required: [true, "city required"],
+        minlength: [2, "too short city"],
+        maxlength: [32, "too long city"],
+      },
+      postalCode: {
+        type: String,
+        required: [true, "postal code required"],
+        minlength: [5, "too short postal code"],
+        maxlength: [10, "too long postal code"],
+      },
     },
     shippingPrice: {
-        type: Number,
-        default: 0,
-      },
-      totalOrderPrice :{
-        type : Number,
+      type: Number,
+      default: 0,
     },
-    taxPrice : {
-        type : Number,
-        default:0,
+    totalOrderPrice: {
+      type: Number,
     },
-    paymentMethodType : {
-        type:String,
-        enum:['cash','card'],
-        default:"cash",
+    taxPrice: {
+      type: Number,
+      default: 0,
     },
-    isPaid:{
-        type:Boolean,
-        default:false,
+    paymentMethodType: {
+      type: String,
+      enum: ["cash", "card"],
+      default: "cash",
     },
-    isDelivered:{
-        type:Boolean,
-        default:false,
+    isPaid: {
+      type: Boolean,
+      default: false,
     },
-    paidAt : {
-        type: Date,
+    isDelivered: {
+      type: Boolean,
+      default: false,
     },
-    DeliveredAt:{
-        type:Date,
-    }
+    paidAt: {
+      type: Date,
+    },
+    DeliveredAt: {
+      type: Date,
+    },
+  },
+  { timestamps: true }
+);
 
-},{timestamps:true})
+const orderModel = mongoose.model("Order", orderSchema);
 
 
 
+orderSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: 'user',
+    select: 'name profileImg email phone',
+  }).populate({
+    path: 'cartItems.product',
+    select: 'title imageCover ',
+  });
 
-const orderModel = mongoose.model("Order",orderSchema)
+  next();
+});
 
-module.exports = orderModel
+module.exports = orderModel;

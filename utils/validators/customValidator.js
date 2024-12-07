@@ -19,7 +19,7 @@ exports.valueAlreadyExists = async (val,req,Model)=>{
  exports.valueAlreadyExistsInSubModel = async(val,req,Model)=>{
                 const user = await Model.findOne({_id:req.user._id});
                 if(!user){
-                    throw new Error("User not found");
+                    throw new Error(`User not found with id ${req.user._id}`);
                 }
                 const address = user.addresses.find(a=>a.alias===val);
                 if(address){
@@ -140,7 +140,6 @@ exports.checkIfUserReviewedProduct = async(productId,req,Model)=> {
 
 
 exports.validateUserReviewOwnership = async(Id,req,Model)=> {
-    console.log(Id)
         const document = await Model.findById(Id);
         console.log(document)
 
@@ -152,3 +151,34 @@ exports.validateUserReviewOwnership = async(Id,req,Model)=> {
         }
     }
     
+    exports.validateOwnership = async(Id,req,Model,idName)=> {
+        const document = await Model.findById({_id:req.params.id});
+        console.log(document)
+
+        if(!document){
+            throw new Error(`${Model.modelName}  not found`);
+        }
+        if(document[idName].toString() !== Id){
+            throw new Error(`${Model.modelName} id does not belongs to parent id `);
+        }
+    }
+    
+    exports.checkSingleImage = (val,req) => {
+        if(!req.file){
+          throw new Error("image is required")
+        } 
+        return true;
+      }
+
+
+exports.checkMaxImages = (val,req) => {
+    if(!req.files){
+      throw new Error("images is required")
+    } else if(!req.files.imageCover){
+      throw new Error("imageCover is required")
+
+    }
+    return true;
+  }
+
+

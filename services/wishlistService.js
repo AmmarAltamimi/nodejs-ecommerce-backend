@@ -6,11 +6,13 @@ const User = require("../models/userModel");
 
 
 
-
+// @desc    Get logged user wishlist
+// @route   GET /api/v1/wishlist
+// @access  Protected/User
 exports.getWishlists = asyncHandler(async(req,res,next)=>{
     const user = await User.findOne({_id:req.user._id}).populate('wishlist');
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
 
     const wishlists = user.wishlist;
@@ -21,6 +23,9 @@ exports.getWishlists = asyncHandler(async(req,res,next)=>{
 })
 
 
+// @desc    Add product to wishlist
+// @route   POST /api/v1/wishlist
+// @access  Protected/User
 exports.addToWishlist = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findByIdAndUpdate(req.user._id,{
@@ -31,7 +36,7 @@ exports.addToWishlist = asyncHandler(async(req,res,next)=>{
 
 
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
         res.status(200).json({status:"success",result:user.wishlist.length,data:user.wishlist});
 
@@ -39,7 +44,9 @@ exports.addToWishlist = asyncHandler(async(req,res,next)=>{
 
 
 
-
+// @desc    Remove product from wishlist
+// @route   DELETE /api/v1/wishlist/:productId
+// @access  Protected/User
 exports.deleteWishlist = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findByIdAndUpdate(req.user._id,{
@@ -50,7 +57,7 @@ exports.deleteWishlist = asyncHandler(async(req,res,next)=>{
 
 
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
         res.status(200).json({status:"success",message:"product  is removed successfully from wishlist"});
 

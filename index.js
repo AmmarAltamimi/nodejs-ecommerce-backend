@@ -1,51 +1,92 @@
-const path = require("path");
-
+/* eslint-disable import/newline-after-import */
+/* eslint-disable import/no-extraneous-dependencies */
 const express = require("express");
-
-const app =express();
+const app = express();
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const cors = require("cors");
 const compression = require("compression");
-
-const morgan = require("morgan");
-
-
+const rateLimit = require("express-rate-limit");
+const hpp = require('hpp');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const session = require('express-session');
+const crypto = require('crypto');
 const dotenv = require("dotenv");
-
-dotenv.config({path : 'config.env'});
-const {dbConnection} = require("./config/database")
-
-const {globalError} = require(`./middlewars/errorMiddleware`)
+const path = require("path");
+const bodyParser = require("body-parser");
+dotenv.config({ path: 'config.env' });
 
 
+const { dbConnection } = require("./config/database");
+const { globalError } = require(`./middlewares/errorMiddleware`);
+const ApiError = require(`./utils/apiError`);
 
-const categoryRouter = require("./routes/categoryRoute");
-const subCategoryRouter = require("./routes/subCategoryRoute");
-const brandRouter = require("./routes/brandRoute");
-const productRouter = require("./routes/productRoute");
-const couponRouter = require("./routes/couponRoute");
-const authRouter = require("./routes/authRoute");
-const userRouter = require("./routes/userRoute");
-const wishlistRouter = require("./routes/wishlistRoute")
-const addressRouter = require("./routes/addressRoute")
-const reviewRouter = require("./routes/reviewRoute")
-const cartRouter = require("./routes/cartRouter")
-const orderRouter = require("./routes/orderRoute")
+const {mountRoutes} = require("./routes/indexRouter")
 const { webhookCheckout } = require('./services/orderService');
 
 
-const ApiError = require(`./utils/apiError`);
 
 
-// connect to database
+//  Database connection
 dbConnection();
 
-
-// Enable other domains to access your application
-app.use(cors());
+// Middleware Setup
+app.use(cors()); // Enable cross-origin resource sharing
 app.options('*', cors());
+app.use(compression()); // Compress responses for faster load times
+app.use(xss()); // XSS protection
+app.use(helmet()); // Helmet for setting HTTP headers securely
+app.use(cookieParser()); // Parse cookies for CSRF protection
+app.use(express.json({ limit: '20kb' })); // Limit the request body size
+app.use(express.urlencoded({ extended: true }));
 
-// compress all responses
-app.use(compression());
+
+
+//  Security Middlewares
+app.use(mongoSanitize()); // Sanitize user inputs to prevent NoSQL injection
+app.use(
+    hpp({
+      whitelist: [
+        'price',
+        'sold',
+        'quantity',
+        'ratingsAverage',
+        'ratingsQuantity',
+      ],
+    })
+  ); // HTTP Parameter Pollution Protection
+
+
+
+  // Session Handling Middleware
+const secret = crypto.randomBytes(64).toString('hex');
+const cookieName = 'yourAppSession';
+app.use(
+  session({
+    secret: secret,
+    name: cookieName,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true, // Ensures cookie is sent only over HTTPS
+      httpOnly: true, // Prevents access via JavaScript
+      sameSite: 'lax', // Helps protect against CSRF
+    },
+  })
+);
+
+// Rate Limiting Middleware
+  // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    message:
+      'Too many accounts created from this IP, please try again after an hour',
+  });
+app.use('/api', limiter);  // Apply the rate limiting middleware to all requests
+
 
 
 // Checkout webhook
@@ -55,39 +96,28 @@ app.post(
     webhookCheckout
   );
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'uploads')));
 
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
     console.log(`mode: ${process.env.NODE_ENV}`);
   }
-  
-
-app.use("/api/v1/categories",categoryRouter);
-app.use("/api/v1/subcategories",subCategoryRouter);
-app.use("/api/v1/brands",brandRouter);
-app.use("/api/v1/products",productRouter);
-app.use("/api/v1/coupons",couponRouter);
-app.use("/api/v1/users",userRouter);
-app.use("/api/v1/auth",authRouter);
-app.use("/api/v1/wishlists",wishlistRouter);
-app.use("/api/v1/addresses",addressRouter);
-app.use("/api/v1/reviews",reviewRouter);
-app.use("/api/v1/carts",cartRouter);
-app.use("/api/v1/orders",orderRouter);
 
  
 
 
+
+// Route Handlers
+mountRoutes(app)
+
+
+//  Global Error Handling
 app.all("*",(req,res,next)=>{
     next(new ApiError (`Can't find this route: ${req.originalUrl}`,400))
 })
 
 app.use(globalError)
 
-
-
+// Server Setup
 const port = process.env.PORT || 8000
 const server = app.listen(port , ()=>{
     console.log(`app listening on port  ${port}` );
@@ -95,6 +125,8 @@ const server = app.listen(port , ()=>{
 })
 
 
+
+// Unhandled Rejection Handling
 process.on("unhandledRejection",(err)=>{
     console.error(`Unhandled rejection Error : ${err.name} | ${err.message}`);
     server.close(()=>{
@@ -102,5 +134,11 @@ process.on("unhandledRejection",(err)=>{
         process.exit(1);
     })
 })
+
+
+
+  
+
+  
 
 

@@ -1,3 +1,4 @@
+// This class provides methods to handle various MongoDB query operations 
 class ApiFeature {
     constructor(mongooseQuery, queryString) {
         this.mongooseQuery = mongooseQuery;
@@ -5,7 +6,7 @@ class ApiFeature {
     }
 
 
-   
+     //  Filters the MongoDB query based on query parameters such as `gte`, `gt`, `lte`, and `lt`.
   filter(){
     const queryStringObj= {...this.queryString}
     const excludesFields = ["limit","page","sort","keyword","fields"];
@@ -23,7 +24,7 @@ class ApiFeature {
   } 
 
 
-
+    // Sorts the query results based on the `sort` query parameter, or defaults to sorting by creation date in descending order.
   sort(){
     if(this.queryString.sort){
         const sortBy = this.queryString .sort.split(",").join(" ");
@@ -37,7 +38,7 @@ class ApiFeature {
   }
 
 
-
+    // Limits the fields returned by the query based on the `fields` query parameter.
   limitFields(){
 
     if(this.queryString.fields){
@@ -52,7 +53,7 @@ class ApiFeature {
   }
   
   
-  
+    // Adds a search functionality using the `keyword` query parameter.
   search(modelName){
     let query = {}
     if(this.queryString.keyword){
@@ -72,7 +73,7 @@ class ApiFeature {
   }
   
   
-  
+      //  Handles pagination by calculating the number of items per page (`limit`) and the page number (`page`).
   paginate(countDocuments){
 
     const page = this.queryString.page * 1   || 1;

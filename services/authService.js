@@ -1,34 +1,81 @@
 
 const asyncHandler =require("express-async-handler");
 const bcrypt = require("bcryptjs")
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
 const {createToken} = require("../utils/createToken");
 const {createRandom} = require("../utils/createRandom_6Digits")
 const {sendEmail} = require("../utils/sendEmail");
 const User = require("../models/userModel");
+const {userRes} = require("../utils/userResponse")
+const {uploadSingleImage} = require("../middlewares/uploadImageMiddleware")
+const cloudinary = require("../utils/cloudinary");
 
 
+exports.uploadUserImage = uploadSingleImage('users','profileImg');
+
+exports.uploadUserImageToCloudinary = async(req,res,next)=>{
+  // if updated  key not image so no req.file will be founded
+  if(!req.file){
+    return next();
+  }   
+  try {
+    const customFileName = `user-${uuidv4()}-${Date.now()}`;  // You can create your own naming scheme
+
+    const result = await cloudinary.uploader.upload(req.file.path,{
+      folder: "users", // Optional: specify folder in Cloudinary
+      public_id: customFileName,  // Set the custom name for the image
+      quality: "auto", // Optional: set quality
+      width: 600, // Optional: resize image width
+      height: 600, // Optional: resize image height
+      crop: "fill", // Optional: crop the image
+    });
+
+    req.body.profileImg =   {
+      url: result.secure_url,       
+      public_id: result.public_id,  
+    };
+
+    next()
+
+  }catch(err){
+    fs.unlinkSync(req.file.path); // Remove local file after successful upload
+      return next(new ApiError(`Failed to upload  to cloudinary ${err.message}`,500));
+
+  }
+
+}
 
 
+// @desc    Signup
+// @route   GET /api/v1/auth/signup
+// @access  Public
 exports.signUp = asyncHandler(async(req,res,next)=>{
 
 const createUser = await User.create({
     name: req.body.name,
+    slug:req.body.slug,
     phone: req.body.phone,
     email: req.body.email,
     password: req.body.password,
+    profileImg:req.body.profileImg
  })
 
 
  //create Token 
  const token = createToken(createUser._id);
 
- res.status(201).json({status: "success", data: createUser, token: token})
+ res.status(201).json({status: "success", data:userRes(createUser) , token: token})
 
 
 })
 
+
+// @desc    Login
+// @route   GET /api/v1/auth/login
+// @access  Public
 exports.login =  asyncHandler(async(req,res,next)=>{
 
     const user = await User.findOne({email:req.body.email})
@@ -39,18 +86,20 @@ exports.login =  asyncHandler(async(req,res,next)=>{
      //create Token 
      const token = createToken(user._id);
     
-     res.status(201).json({status: "success", token: token})
+     res.status(201).json({status: "success",data:userRes(user), token: token})
     
     
     })
     
 
-
+// @desc    Forgot password
+// @route   POST /api/v1/auth/forgotPassword
+// @access  Public
 exports.forgetPassword = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findOne({email:req.body.email});
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.body.email}`,404))
     }
 
     const resetCode = createRandom();
@@ -95,11 +144,13 @@ await user.save();
     
 })
 
-
+// @desc    Verify password reset code
+// @route   POST /api/v1/auth/verifyResetCode
+// @access  Public
 exports.verifyPassResetCode = asyncHandler(async(req,res,next)=>{
 
     const hashReceivedResetCode = crypto.createHash('sha256').update(req.body.resetCode).digest('hex');
-    const user = await User.findOne({passwordResetCode:hashReceivedResetCode , passwordResetExpires :{$gt:Date.now()}})
+    const user = await User.findOne({email:req.body.email,passwordResetCode:hashReceivedResetCode , passwordResetExpires :{$gt:Date.now()}})
     if(!user){
         return next(new ApiError("Invalid or expired reset code",401))
     }
@@ -113,11 +164,14 @@ exports.verifyPassResetCode = asyncHandler(async(req,res,next)=>{
 })
 
 
+// @desc    Reset password
+// @route   POST /api/v1/auth/resetPassword
+// @access  Public
 exports.resetPassword = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findOne({email:req.body.email});
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with email ${req.body.email}`,404))
     }
 
     if(!user.passwordResetVerified){

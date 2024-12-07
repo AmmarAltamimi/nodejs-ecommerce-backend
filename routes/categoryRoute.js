@@ -1,33 +1,61 @@
-const express = require('express');
+const express = require("express");
 
 const router = express.Router();
 
-const {getCategories,createCategory,updateCategory,deleteCategory,getCategory} = require("../services/categoryService");
+const {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategory,
+  uploadCategoryImage,
+  uploadCategoryImageToCloudinary
+} = require("../services/categoryService");
 
-const {createCategoryValidator,updateCategoryValidator,deleteCategoryValidator,getCategoryValidator} = require("../utils/validators/categoryValidator");
-const {protect} = require("../middlewars/protectMiddleware")
-const {allowedTo} = require("../middlewars/allowedToMiddleware")
+const {
+  createCategoryValidator,
+  updateCategoryValidator,
+  deleteCategoryValidator,
+  getCategoryValidator,
+} = require("../utils/validators/categoryValidator");
+const {validateActualTypeAndCleanFileSingleImage} = require("../middlewares/uploadImageMiddleware")
+const { protect } = require("../middlewares/protectMiddleware");
+const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
-
-const subCategoryRouter = require("./subCategoryRoute")
-
+const subCategoryRouter = require("./subCategoryRoute");
 
 //nested route
-router.use('/:categoryId/subcategories',subCategoryRouter)
+router.use("/:categoryId/subcategories", subCategoryRouter);
 
-
-
-router.route("/").get(getCategories).post(protect,allowedTo("admin","manager"),createCategoryValidator,createCategory);
-router.route("/:id").put(protect,allowedTo("admin","manager"),updateCategoryValidator,updateCategory)
-.delete(protect,allowedTo("admin","manager"),deleteCategoryValidator,deleteCategory)
-.get(getCategoryValidator,getCategory)
-
-
-
-
-
+router
+  .route("/")
+  .get(getCategories)
+  .post(
+    protect,
+    allowedTo("admin", "manager"),
+    uploadCategoryImage,
+    createCategoryValidator,
+    validateActualTypeAndCleanFileSingleImage,
+    uploadCategoryImageToCloudinary,
+    createCategory
+  );
+router
+  .route("/:id")
+  .put(
+    protect,
+    allowedTo("admin", "manager"),
+    uploadCategoryImage,
+    updateCategoryValidator,
+    validateActualTypeAndCleanFileSingleImage,
+    uploadCategoryImageToCloudinary,
+    updateCategory
+  )
+  .delete(
+    protect,
+    allowedTo("admin"),
+    deleteCategoryValidator,
+    deleteCategory
+  )
+  .get(getCategoryValidator, getCategory);
 
 module.exports = router;
-
-
-

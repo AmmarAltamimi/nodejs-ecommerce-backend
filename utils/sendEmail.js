@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer")
 
-
+// Sends an email using Nodemailer with the provided options.
 exports.sendEmail = async (options)=> {
 
     const transporter = nodemailer.createTransport({

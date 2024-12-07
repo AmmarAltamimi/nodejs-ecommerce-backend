@@ -3,14 +3,13 @@ const ApiError = require("../utils/apiError");
 const User = require("../models/userModel");
 
 
-
-
-
-
-exports.getAddresses = asyncHandler(async(req,res,next)=>{
+// @desc    Get logged user addresses list
+// @route   GET /api/v1/addresses
+// @access  Protected/User
+exports.getLoggedUserAddresses = asyncHandler(async(req,res,next)=>{
     const user = await User.findOne({_id:req.user._id}).populate("addresses");
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
 
     const addresses = user.addresses;
@@ -21,6 +20,10 @@ exports.getAddresses = asyncHandler(async(req,res,next)=>{
 })
 
 
+
+// @desc    Add address to user addresses list
+// @route   POST /api/v1/addresses
+// @access  Protected/User
 exports.addToAddress = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findByIdAndUpdate(req.user._id,{
@@ -31,7 +34,7 @@ exports.addToAddress = asyncHandler(async(req,res,next)=>{
 
 
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
         res.status(200).json({status:"success",result:user.addresses.length,data:user.addresses});
 
@@ -39,7 +42,9 @@ exports.addToAddress = asyncHandler(async(req,res,next)=>{
 
 
 
-
+// @desc    Remove address from user addresses list
+// @route   DELETE /api/v1/addresses/:addressId
+// @access  Protected/User
 exports.deleteAddress = asyncHandler(async(req,res,next)=>{
 
     const user = await User.findByIdAndUpdate(req.user._id,{
@@ -50,7 +55,7 @@ exports.deleteAddress = asyncHandler(async(req,res,next)=>{
 
 
     if(!user){
-        return next(new ApiError("User not found",404))
+        return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
         res.status(200).json({status:"success",message:"address is removed successfully"});
 
