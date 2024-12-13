@@ -7,7 +7,7 @@ const User = require("../models/userModel");
 // @route   GET /api/v1/addresses
 // @access  Protected/User
 exports.getLoggedUserAddresses = asyncHandler(async(req,res,next)=>{
-    const user = await User.findOne({_id:req.user._id}).populate("addresses");
+    const user = await User.findOne({_id:req.user._id});
     if(!user){
         return next(new ApiError(`User not found with id ${req.user._id}`,404))
     }
