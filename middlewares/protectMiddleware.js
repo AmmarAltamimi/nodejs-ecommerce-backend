@@ -6,13 +6,17 @@ const User = require("../models/userModel");
 
 // Protect routes by checking the authorization token and validating the user.
 exports.protect = asyncHandler(async (req, res, next) => {
-  if (!req.headers.authorization) {
+  let token;
+  if (req.headers.authorization &&  req.headers.authorization.startsWith('Bearer') ) {
+     token = req.headers.authorization.split(" ")[1];
+
+  }
+
+  if(!token){
     return next(
       new ApiError("You are not login please login to access this route ", 401)
     );
   }
-
-  const token = req.headers.authorization.split(" ")[1];
 
   const decoded = await jwt.verify(token, process.env.JWT_SECRET_KEY);
 
