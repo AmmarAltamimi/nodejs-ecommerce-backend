@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const Product = require("./productModel");
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -15,6 +14,10 @@ const reviewSchema = new mongoose.Schema(
       min: [1, "minimum rating is 1"],
       max: [5, "maximum rating is 5"],
     },
+    anonymousComment:{
+      type:Boolean,
+      default:false
+    },
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -25,6 +28,14 @@ const reviewSchema = new mongoose.Schema(
       ref: "Product",
       required: [true, "product required"],
     },
+    images:[ {
+      url: {type:String},      
+      public_id:{type:String},  
+    }],
+    userLiked:[ {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    }],
   },
   { timestamps: true }
 );
@@ -38,21 +49,27 @@ reviewSchema.statics.calcAverageRatingsAndQuantity = async function (productId) 
     },
     {
       $group: {
-        _id: `product`,
-        avgRatings: { $avg: `$ratings` },
+        _id: "$product",
+        avgRating: { $avg: "$ratings" },
         ratingsQuantity: { $sum: 1 },
       },
     },
   ]);
 
+    const Product = mongoose.model("Product");
+  
   // save it to product Model
-
   if (result.length > 0) {
+    console.log(Product);
+    console.log(Product.modelName);
+    
     await Product.findByIdAndUpdate(productId, {
       ratingAverage: result[0].avgRatings,
       ratingQuality: result[0].ratingsQuantity,
     });
   } else {
+    console.log(Product);
+    console.log(Product.modelName);
     await Product.findByIdAndUpdate(productId, {
       ratingAverage: 0,
       ratingQuality: 0,

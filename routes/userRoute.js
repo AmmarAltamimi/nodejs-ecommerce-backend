@@ -70,10 +70,10 @@ router.delete(
 //admin
 router
   .route("/")
-  .get(protect, allowedTo("admin", "manager"), getUsers)
+  .get(protect, allowedTo("admin"), getUsers)
   .post(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadUserImage,
     userDefaultImage,
     createUserValidator,
@@ -83,10 +83,10 @@ router
   );
 router
   .route("/:id")
-  .get(protect, allowedTo("admin", "manager"), getUserValidator, getUser)
+  .get(protect, allowedTo("admin"), getUserValidator, getUser)
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadUserImage,
     updateUserValidator,
     validateActualTypeAndCleanFileSingleImage,
@@ -95,19 +95,19 @@ router
   )
   .delete(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     deleteUserValidator,
     deleteUser
   );
 router
   .route("/activate/:id")
-  .put(protect, allowedTo("admin", "manager"), activateUser);
+  .put(protect, allowedTo("admin"), activateUser);
 
 router
   .route("/changePassword/:id")
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     updateUserPasswordValidator,
     updateUserPassword
   );

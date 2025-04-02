@@ -1,22 +1,22 @@
 const { check } = require("express-validator");
-const {
-  validatorMiddleware,
-} = require("../../middlewares/validatorMiddleware");
+const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Product = require("../../models/productModel");
-const { isRefBelongsToModel } = require("./customValidator");
+const User = require("../../models/userModel");
+const { ensureDocumentExistsById,ensureSubDocumentExistsById } = require("./customValidator");
 
 exports.createWishlistValidator = [
   check("productId")
     .isMongoId()
     .withMessage("Invalid product id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, Product)),
+    .custom((val, { req }) => ensureDocumentExistsById(val, req, Product)),
+      check("variantId").isMongoId().withMessage("Invalid variant id format"),
   validatorMiddleware,
 ];
 
 exports.deleteWishlistValidator = [
-  check("productId")
+  check("wishlistId")
     .isMongoId()
-    .withMessage("Invalid product id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, Product)),
-  validatorMiddleware,
+    .withMessage("Invalid wishlist Id format")
+    .custom((val, { req }) => ensureSubDocumentExistsById(val, req, User,{_id: req.user._id},"wishlist")),
+    validatorMiddleware,
 ];

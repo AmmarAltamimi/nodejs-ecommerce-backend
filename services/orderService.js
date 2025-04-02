@@ -1,247 +1,341 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const asyncHandler = require("express-async-handler");
-
 const Order = require("../models/orderModel");
 const Cart = require("../models/cartModel");
 const Product = require("../models/productModel");
-const User = require("../models/userModel");
+const GroupOrder = require("../models/groupOrderModel");
+const Address = require("../models/addressModel");
+const Coupon = require("../models/couponModel");
+const Store = require("../models/storeModel");
+const ShippingRate = require("../models/shippingRateModel");
 
-const { getAll, getOne } = require("../middlewares/handlersFactoryMiddleware");
+const {
+  calculateTotalPriceWithShippingFee,
+  getNewTotalPriceAfterCouponDiscount,
+  updateCartWithLatestForCheckout,
+} = require("./cartService");
+const {getShippingDatesRange} = require("../utils/shippingDatesRange")
+
+const { getAll ,getOne} = require("../middlewares/handlersFactoryMiddleware");
 
 const ApiError = require("../utils/apiError");
 
-const afterOrderCreated = async(createOrder,cart,cartId)=>{
+// after create the order there are some things you have to do such as (increase product sold and decrease qtyStock )  and  clear cart
+const afterOrderCreated = async (createOrder, cart, cartId) => {
   if (createOrder) {
-    const bulkOption = cart.cartItem.map((item) => ({
-      updateOne: {
-        filter: { _id: item.product },
-        update: { $inc: { count: -item.quantity, sold: +item.quantity,"colors.$[colorFilter].sizes.$[sizeFilter].count":-item.quantity } },
-        arrayFilters :[{"colorFilter.name":item.colorWithSize[0]},{"sizeFilter.name":item.colorWithSize[1]} ]
-      },
-    }));
+    //   increase product sold and decrease qtyStock
+    const bulkOption = await Promise.all(
+      cart.cartItem.map(async (item) => {
+        const product = await Product.findById(item.product);
+
+        return {
+          updateOne: {
+            filter: {
+              _id: item.product,
+              subcategoryType: product.subcategoryType,
+            }, // Match the product
+            update: {
+              $inc: {
+                sold: +item.quantity, // Increment sold
+                "variant.$[objFilter].stockQuantity": -item.quantity, // Decrease stock
+              },
+            },
+            arrayFilters: [
+              { "objFilter._id": item.variantId }, // Match array elements by ID
+            ],
+          },
+        };
+      })
+    );
+
     await Product.bulkWrite(bulkOption, {});
+
     // clear cart
     await Cart.findByIdAndDelete(cartId);
   }
+};
 
-}
-
+const getShippingDetails = async (storeId, countryId) => {
+  const defaultShipping = await Store.findOne({ _id: storeId });
+  const shippingRate = await ShippingRate.findOne({
+    store: storeId,
+    country: countryId,
+  });
+  
+  return {
+    shippingService:
+      shippingRate?.shippingService || defaultShipping.defaultShippingService,
+    deliveryTimeMin:
+      shippingRate?.deliveryTimeMin || defaultShipping.defaultDeliveryTimeMin,
+    deliveryTimeMax:
+      shippingRate?.deliveryTimeMax || defaultShipping.defaultDeliveryTimeMax,
+  };
+};
 
 // Nested route (get)
 exports.createFilterObj = async (req, res, next) => {
-  if (req.params.userId) {
-    req.filterObj = { user: req.params.userId };
-  }
   if (req.user.role === "user") {
     req.filterObj = { user: req.user._id };
   }
   next();
 };
 
-
+exports.groupFilterObj = async (req, res, next) => {
+    if (req.body.storeId) {
+      req.filterObj = { store:req.body.storeId };
+    }
+    next();
+  };
+  
 
 // @desc    Get all orders
 // @route   POST /api/v1/orders
-// @access  Protected/User-Admin-Manager
-exports.getOrders = getAll(Order);
+// @access  Protected/User
+exports.getMyOrders = getAll(Order);
 
-// @desc    Get specific order
-// @route   POST /api/v1/orders/:orderId
-// @access  Protected/Admin-Manager
-exports.getOrder = getOne(Order);
+
+// @desc    Get all Group Order belongs to specific store
+// @route   POST /api/v1/orders/groupedOrder
+// @access  Protected/seller
+exports.getGroupOrder = getAll(GroupOrder);
+
 
 
 // @desc    create cash order
 // @route   POST /api/v1/orders/cartId
 // @access  Protected/User
-exports.createCashOrder = asyncHandler(async (req, res, next) => {
-  const { shippingAddress } = req.body;
-  const { cartId } = req.params;
+exports.createOrder = asyncHandler(async (req, res, next) => {
+  const { cart, address } = req.body;
+  // create  order
 
-  const cart = await Cart.findById(cartId);
+  // 1.get cart
+  const getCart = await Cart.findById(cart);
   if (!cart) {
-    return next(new ApiError(`Cart not found with id ${cartId}`, 404));
+    return next(new ApiError(`Cart not found with id ${cart}`, 404));
   }
 
-  // get total price
-  const taxPrice = 0;
-  const shippingPrice = 0;
-  const totalPrice = cart.totalPriceAfterDiscount
-    ? cart.totalPriceAfterDiscount
-    : cart.totalPrice;
-  const totalOrderPrice = totalPrice + shippingPrice + taxPrice;
+  //2.  updated cart + update  get total subTotalValue and total shippingFeesValue and total + apply coupon if exits and update new total price
+  const updatedCart = await updateCartWithLatestForCheckout(getCart);
+  console.log("1", updatedCart);
 
+  //3. create order
   const createOrder = await Order.create({
     user: req.user._id,
-    cartItems: cart.cartItem,
-    shippingAddress: shippingAddress,
-    totalOrderPrice: totalOrderPrice,
+    shippingFees: updatedCart.shippingFees,
+    subTotal: updatedCart.subTotal,
+    total: updatedCart.total,
+    shippingAddress: address,
   });
 
-  await afterOrderCreated(createOrder,cart,cartId)
+  console.log("2", createOrder);
 
-  res
-    .status(201)
-    .json({
-      status: "success",
-      message: "order created successfully",
-      data: createOrder,
-    });
+  // create group order
+
+  //1. cart item is array of cartItemObj -> i will divide them to groups based in storeId
+  // so i will make obj have storeId as key then its groups which array of cartItemObj
+  const groupedItems = updatedCart.cartItem.reduce((acc, item) => {
+    if (!acc[item.store]) acc[item.store] = [];
+    acc[item.store].push(item);
+    return acc;
+  }, {});
+
+  console.log("3", groupedItems);
+
+  //2. i will defined groups which array of obj each obj is orderGrouped
+  // i convert obj to array of arrays each array have first the store  and second the array of cartItemObj the belongs to this store
+  // after that i will loop and in each iteration i have group so i will create groupOrder in each iteration
+  await Promise.all(
+    Object.entries(groupedItems).map(async ([storeId, items]) => {
+      // 1. check if there any applied coupon that valid + belongs to this store
+
+      let groupedCoupon;
+      let coupon;
+      if (updatedCart.appliedCoupon) {
+         coupon = await Coupon.findOne({
+          name: updatedCart.appliedCoupon,
+          start: { $lt: Date.now() },
+          expire: { $gt: Date.now() },
+        });
+        console.log(
+          "5",
+          updatedCart.appliedCoupon,
+          coupon && coupon.store.toString() === storeId.toString(),
+
+        );
+        if (coupon && coupon.store.toString() === storeId.toString()) {
+          groupedCoupon = coupon._id;
+        }
+      }
+      console.log("6", groupedCoupon);
+
+      //2. get the  groupShippingFees and groupSubTotal and total
+      const { subTotalValue, shippingFeesValue } =
+        calculateTotalPriceWithShippingFee(items);
+      let groupTotal = subTotalValue + shippingFeesValue;
+      // check if there is discount
+      if (groupedCoupon) {
+        const discountValue = (groupTotal * coupon?.discount) / 100;
+        groupTotal = groupTotal - discountValue;
+      }
+      console.log("7", groupTotal);
+
+      // 3. get shipping details for this storeId and this country
+      // get country
+      countryId = "67cda67e0edb0b1b1efe1bf5";
+      // get shipping details
+      const { shippingService, deliveryTimeMin, deliveryTimeMax } = await getShippingDetails(storeId, countryId);
+      // Returns the shipping date range by adding the specified min and max days to the current date.
+      const { minDate, maxDate } = getShippingDatesRange(
+        deliveryTimeMin,
+        deliveryTimeMax,
+        new Date(createOrder.createdAt)
+      );
+
+      console.log(
+        "8",
+        storeId,
+        countryId,
+        shippingService,
+        deliveryTimeMin,
+        deliveryTimeMax,
+        minDate,
+        maxDate
+      );
+
+      // 4. create the GroupOrder
+      const createGroupOrder = await GroupOrder.create({
+        order: createOrder._id,
+        store: storeId,
+        coupon: groupedCoupon || null,
+        OrderItem: items,
+        groupShippingFees: shippingFeesValue,
+        groupSubTotal: subTotalValue,
+        total: groupTotal,
+        shippingService: shippingService,
+        shippingDeliveryMin: minDate,
+        shippingDeliveryMax: maxDate,
+      });
+
+      console.log("9", createGroupOrder);
+    })
+  );
+
+
+  //3. find Group order that belongs to this order
+  const groupOrder = await GroupOrder.find({order:createOrder._id})
+
+  //4. the res
+  res.status(201).json({
+    status: "success",
+    message: "order created successfully",
+    order: createOrder,
+    groupOrder,
+  });
 });
 
 
-// @desc    Update order paid status to paid
-// @route   PUT /api/v1/orders/:id/pay
-// @access  Protected/Admin-Manager
-exports.updateOrderToPaid = asyncHandler(async (req, res, next) => {
-  const updateOrder = await Order.findByIdAndUpdate(
+// @desc    Get specific Order by id
+// @route   GET /api/v1/Order/:id
+// @access  user
+exports.getOrderDetails = getOne(Order);
+
+
+// @desc    Update order status
+// @route   PUT /api/v1/orders/:id/updateOrderStatus
+// @access  Protected/seller
+exports.updateOrderStatus = asyncHandler(async (req, res, next) => {
+  const updateOrderStatus = await Order.findByIdAndUpdate(
     req.params.id,
     {
-      isPaid: true,
-      paidAt: Date.now(),
+      orderStatus: req.body.orderStatus,
     },
     { new: true }
   );
 
-  if (!updateOrder) {
-    return next(new ApiError(`order not found with id ${req.params.id}`, 404));
-  }
-
-  res
-    .status(200)
-    .json({
-      status: "success",
-      message: "order is marked as paid successfully",
-      data: updateOrder,
-    });
-});
-
-
-// @desc    Update order delivered status
-// @route   PUT /api/v1/orders/:id/deliver
-// @access  Protected/Admin-Manager
-exports.updateOrderToDelivered = asyncHandler(async (req, res, next) => {
-  const updateOrder = await Order.findByIdAndUpdate(
-    req.params.id,
-    {
-      isDelivered: true,
-      deliveredAt: Date.now(),
-    },
-    { new: true }
-  );
-
-  if (!updateOrder) {
-    return next(new ApiError(`order not found with id ${req.params.id}`, 404));
-  }
-
-  res
-    .status(200)
-    .json({
-      status: "success",
-      message: "order is marked as Delivered successfully",
-      data: updateOrder,
-    });
-});
-
-
-
-// @desc    Get checkout session from stripe and send it as response
-// @route   GET /api/v1/orders/checkout-session/cartId
-// @access  Protected/User
-exports.checkoutSession = asyncHandler(async (req, res, next) => {
-  const { cartId } = req.params;
-  const { shippingAddress } = req.body;
-  const cart = await Cart.findById(cartId);
-  if (!cart) {
-    return next(new ApiError(`Cart not found with id ${cartId}`, 404));
-  }
-
-  // get total price
-  const taxPrice = 0;
-  const shippingPrice = 0;
-  const totalPrice = cart.totalPriceAfterDiscount
-    ? cart.totalPriceAfterDiscount
-    : cart.totalPrice;
-  const totalOrderPrice = totalPrice + shippingPrice + taxPrice;
-
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        price_data: {
-          currency: "egp",
-          product_data: {
-            name: req.user.name,
-          },
-          unit_amount: totalOrderPrice * 100, // Amount in cents (e.g., 150.00 EGP = 15000)
-        },
-        quantity: 1,
-      },
-    ],
-    mode: "payment",
-    success_url: `${req.protocol}://${req.get("host")}/orders`,
-    cancel_url: `${req.protocol}://${req.get("host")}/carts`,
-    customer_email: req.user.email,
-    client_reference_id: cartId,
-    metadata: shippingAddress,
-  });
-
-  res.status(200).json({ status: "success", session: session });
-});
-
-
-
-const createCardOrder = async (session, req, res, next) => {
-  const {
-    client_reference_id: cartId,
-    metadata: shippingAddress,
-    amount_total: totalOrderPrice,
-  } = session;
-
-  const cart = await Cart.findById(cartId);
-  if (!cart) {
-    throw new ApiError(`Cart not found with id ${cartId}`, 404);
-  }
-
-  const user = await User.findOne({ email: session.customer_email });
-
-  const createOrder = await Order.create({
-    user: user._id,
-    cartItems: cart.cartItem,
-    paymentMethodType: "card",
-    isPaid: true,
-    paidAt: Date.now(),
-    shippingAddress: shippingAddress,
-    totalOrderPrice: totalOrderPrice / 100,
-  });
-
-  await afterOrderCreated(createOrder,cart,cartId)
-
-};
-
-
-
-// @desc    This webhook will run when stripe payment success paid
-// @route   POST /webhook-checkout
-// @access  Protected/User
-exports.webhookCheckout = asyncHandler(async (req, res, next) => {
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+  if (!updateOrderStatus) {
+    return next(
+      new ApiError(`order not found with id ${req.params.id}`, 404)
     );
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  if (event.type === "checkout.session.completed") {
-    //  Create order
-    createCardOrder(event.data.object, req, res, next);
-  }
-  
-  return res.status(200).json({ received: true });
 
+  if (req.body.orderStatus === "Delivered") {
+    updateOrderStatus.DeliveredAt = Date.now();
+  }else{
+    updateOrderStatus.DeliveredAt = null;
+  }
+
+  await updateOrderStatus.save();
+  res.status(200).json({
+    status: "success",
+    message: "Order Status is updated successfully",
+    data: updateOrderStatus,
+  });
+});
+
+// @desc    Update group order status
+// @route   PUT /api/v1/orders/:id/updateGroupOrderStatus
+// @access  Protected/seller
+exports.updateGroupOrderStatus = asyncHandler(async (req, res, next) => {
+  const updateGroupOrderStatus = await GroupOrder.findByIdAndUpdate(
+    req.params.groupId,
+    {
+      groupOrderStatus: req.body.groupOrderStatus,
+    },
+    { new: true }
+  );
+
+  if (!updateGroupOrderStatus) {
+    return next(
+      new ApiError(`group order not found with id ${req.params.groupId}`, 404)
+    );
+  }
+
+  if (req.body.groupOrderStatus === "Delivered") {
+    updateGroupOrderStatus.DeliveredAt = Date.now();
+  }else{
+    updateGroupOrderStatus.DeliveredAt = null;
+  }
+
+
+  res.status(200).json({
+    status: "success",
+    message: "Group Order Status is updated successfully",
+    data: updateGroupOrderStatus,
+  });
+});
+
+// @desc    Update item order status
+// @route   PUT /api/v1/orders/:id/updateItemOrderStatus
+// @access  Protected/seller
+exports.updateItemOrderStatus = asyncHandler(async (req, res, next) => {
+  const groupOrder = await GroupOrder.findById(req.params.groupId);
+  if (!groupOrder) {
+    return next(
+      new ApiError(`group order not found with id ${req.params.groupId}`, 404)
+    );
+  }
+
+  const ItemOrderToUpdateStatus = groupOrder.OrderItem.find(
+    (item) => item.id.toString() === req.params.itemId
+  );
+  if (!ItemOrderToUpdateStatus) {
+    return next(
+      new ApiError(`item order not found with id ${req.params.itemId}`, 404)
+    );
+  }
+
+  ItemOrderToUpdateStatus.productStatus = req.body.productStatus;
+  if (req.body.productStatus === "Delivered") {
+    ItemOrderToUpdateStatus.DeliveredAt = Date.now();
+  }else{
+    ItemOrderToUpdateStatus.DeliveredAt = null;
+  }
+
+
+  await groupOrder.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "item Order Status is updated successfully",
+    data: groupOrder,
+  });
 });

@@ -36,7 +36,7 @@ router
   )
   .post(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     validatorCategoryId, // validate Category id in params
     setCategoryIdToBody, // create subCategory for specific category
     uploadSubCategoryImage,
@@ -49,7 +49,7 @@ router
   .route("/:id")
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     validatorCategoryIdForSpecificSubcategory, // validate Category id in params and Category id is equal to category id in subcategory
     uploadSubCategoryImage,
     updateSubCategoryValidator,
@@ -65,7 +65,7 @@ router
     deleteSubCategory
   )
   .get(
-    validatorCategoryIdForSpecificSubcategory,  // validate Category id in params and Category id is equal to category id in subcategory
+    validatorCategoryIdForSpecificSubcategory, // validate Category id in params and Category id is equal to category id in subcategory
     getSubCategoryValidator,
     getSubCategory
   );

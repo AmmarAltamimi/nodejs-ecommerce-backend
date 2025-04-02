@@ -4,66 +4,77 @@ const router = express.Router({ mergeParams: true }); // get user id
 
 const {
   createFilterObj,
-  getOrders,
-  createCashOrder,
-  updateOrderToPaid,
-  updateOrderToDelivered,
-  getOrder,
-  checkoutSession,
+  groupFilterObj,
+  getMyOrders,
+  createOrder,
+  updateOrderStatus,
+  updateGroupOrderStatus,
+  updateItemOrderStatus,
+  getGroupOrder,
+  getOrderDetails
 } = require("../services/orderService");
 const {
-  createCashOrderValidator,
-  updateOrderToPaidValidator,
-  updateOrderToDeliveredValidator,
-  getOrderValidator,
-  checkoutSessionValidator,
-  validatorUserId,   
+createOrderValidator,
+orderValidator,
+storeGroupValidator,
+updateGroupOrderValidator,
+updateItemOrderValidator,
 } = require("../utils/validators/orderValidator  ");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
-router.get(
-  "/",
-  protect,
-  allowedTo("user", "admin", "manager"),
-  validatorUserId, // validate user id in params
-  createFilterObj, // get list of order for specific user
-  getOrders
-);
-
-router.post(
-  "/:cartId",
-  protect,
-  allowedTo("user"),
-  createCashOrderValidator,
-  createCashOrder
-);
-
-router.get(
-  "/checkout-session/:cartId",
-  protect,
-  allowedTo("user"),
-  checkoutSessionValidator,
-  checkoutSession
-);
-
 router
-  .route("/:id")
-  .get(protect, allowedTo("admin", "manager"), getOrderValidator, getOrder);
+  .route("/")
+  .get(
+    protect,
+    allowedTo("user"),
+    createFilterObj, 
+    getMyOrders
+  )
+  .post(protect, allowedTo("user"), createOrderValidator, createOrder);
 
+  router
+  .route("/groupedOrder")
+  .get(
+    protect,
+    allowedTo("seller"),
+    groupFilterObj,
+    storeGroupValidator,
+    getGroupOrder
+  )
+
+  router
+  .route("/:id")
+  .get(
+    protect,
+    allowedTo("user"),
+    orderValidator,
+    getOrderDetails
+  )
+
+  router.put(
+    "/:id/updateOrderStatus",
+    protect,
+    allowedTo("seller"),
+    orderValidator,
+    updateOrderStatus
+  );
+  
 router.put(
-  "/:id/isPaid",
-  protect,
-  allowedTo("admin", "manager"),
-  updateOrderToPaidValidator,
-  updateOrderToPaid
-);
+    "/:groupId/updateGroupOrderStatus",
+    protect,
+    allowedTo("seller"),
+    updateGroupOrderValidator,
+    updateGroupOrderStatus
+  );
+  
 router.put(
-  "/:id/isDelivered",
-  protect,
-  allowedTo("admin", "manager"),
-  updateOrderToDeliveredValidator,
-  updateOrderToDelivered
-);
+    "/:groupId/:itemId/updateItemOrderStatus",
+    protect,
+    allowedTo("seller"),
+    updateItemOrderValidator,
+    updateItemOrderStatus
+  );
+
 
 module.exports = router;

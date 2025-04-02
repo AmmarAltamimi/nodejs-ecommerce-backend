@@ -9,7 +9,7 @@ const {
   deleteCategory,
   getCategory,
   uploadCategoryImage,
-  uploadCategoryImageToCloudinary
+  uploadCategoryImageToCloudinary,
 } = require("../services/categoryService");
 
 const {
@@ -18,7 +18,9 @@ const {
   deleteCategoryValidator,
   getCategoryValidator,
 } = require("../utils/validators/categoryValidator");
-const {validateActualTypeAndCleanFileSingleImage} = require("../middlewares/uploadImageMiddleware")
+const {
+  validateActualTypeAndCleanFileSingleImage,
+} = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
@@ -32,7 +34,7 @@ router
   .get(getCategories)
   .post(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadCategoryImage,
     createCategoryValidator,
     validateActualTypeAndCleanFileSingleImage,
@@ -43,19 +45,14 @@ router
   .route("/:id")
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadCategoryImage,
     updateCategoryValidator,
     validateActualTypeAndCleanFileSingleImage,
     uploadCategoryImageToCloudinary,
     updateCategory
   )
-  .delete(
-    protect,
-    allowedTo("admin"),
-    deleteCategoryValidator,
-    deleteCategory
-  )
+  .delete(protect, allowedTo("admin"), deleteCategoryValidator, deleteCategory)
   .get(getCategoryValidator, getCategory);
 
 module.exports = router;

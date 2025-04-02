@@ -8,23 +8,23 @@ const {
   updateCoupon,
   deleteCoupon,
   getCoupon,
-} = require("../services/couponService  ");
+} = require("../services/couponService");
 
 const {
   createCouponValidator,
   updateCouponValidator,
   deleteCouponValidator,
   getCouponValidator,
-} = require("../utils/validators/couponValidator  ");
+} = require("../utils/validators/couponValidator");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
 router
   .route("/")
-  .get(protect, allowedTo("admin", "manager"), getCoupons)
+  .get(protect, allowedTo("seller"), getCoupons)
   .post(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("seller"),
     createCouponValidator,
     createCoupon
   );
@@ -32,16 +32,16 @@ router
   .route("/:id")
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("seller"),
     updateCouponValidator,
     updateCoupon
   )
   .delete(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("seller"),
     deleteCouponValidator,
     deleteCoupon
   )
-  .get(protect, allowedTo("admin", "manager"), getCouponValidator, getCoupon);
+  .get(protect, allowedTo("seller"), getCouponValidator, getCoupon);
 
 module.exports = router;

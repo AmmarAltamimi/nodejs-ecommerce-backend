@@ -1,10 +1,8 @@
 const { check } = require("express-validator");
-const {
-  validatorMiddleware,
-} = require("../../middlewares/validatorMiddleware");
+const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const User = require("../../models/userModel");
 const {
-  valueAlreadyExists,
+  ensureUniqueModelValue,
   setSlug,
   checkPasswordConfirm,
   checkCurrentPassword,
@@ -19,13 +17,13 @@ exports.createUserValidator = [
     .withMessage("too short user name")
     .isLength({ max: 32 })
     .withMessage("too long user name")
-    .custom((val, { req }) => setSlug(val, req)),
+    .custom((val, { req }) => setSlug(val, req,User)),
   check("email")
     .isEmail()
     .withMessage("Invalid user email format")
     .notEmpty()
     .withMessage("user email required")
-    .custom((val, { req }) => valueAlreadyExists(val, req, User)),
+    .custom((val, { req }) => ensureUniqueModelValue(val, req,false, User,{email:val})),
   check("phone")
     .isMobilePhone(["ar-YE", "ar-EG", "ar-SA"])
     .withMessage(
@@ -43,22 +41,20 @@ exports.createUserValidator = [
   validatorMiddleware,
 ];
 
-
-
 exports.updateUserValidator = [
   check("id").isMongoId().withMessage("Invalid User id format"),
   check("name")
-  .optional()
-  .isLength({ min: 2 })
-  .withMessage("too short user name")
-  .isLength({ max: 32 })
-  .withMessage("too long user name")
-  .custom((val, { req }) => setSlug(val, req)),
+    .optional()
+    .isLength({ min: 2 })
+    .withMessage("too short user name")
+    .isLength({ max: 32 })
+    .withMessage("too long user name")
+    .custom((val, { req }) => setSlug(val, req,User)),
   check("email")
     .isEmail()
     .withMessage("Invalid user email format")
     .optional()
-    .custom((val, { req }) => valueAlreadyExists(val, req, User)),
+    .custom((val, { req }) => ensureUniqueModelValue(val, req,req.params.id, User,{email:val})),
   check("phone")
     .optional()
     .isMobilePhone(["ar-YE", "ar-EG", "ar-SA", "en-IN"])
@@ -100,12 +96,12 @@ exports.updateLoggedUserDataValidator = [
     .withMessage("too short user name")
     .isLength({ max: 32 })
     .withMessage("too long user name")
-    .custom((val, { req }) => setSlug(val, req)),
+    .custom((val, { req }) => setSlug(val, req,User)),
   check("email")
     .isEmail()
     .withMessage("Invalid user email format")
     .optional()
-    .custom((val, { req }) => valueAlreadyExists(val, req, User)),
+    .custom((val, { req }) => ensureUniqueModelValue(val, req, req.params.id,User,{email:val})),
   check("phone")
     .optional()
     .isMobilePhone(["ar-YE", "ar-EG", "ar-SA", "en-IN"])

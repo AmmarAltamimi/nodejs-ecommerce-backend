@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
 const ApiError = require("../utils/apiError");
 const User = require("../models/userModel");
 const { createToken } = require("../utils/createToken");
@@ -12,51 +12,45 @@ const {
   createOne,
   deleteOne,
 } = require("../middlewares/handlersFactoryMiddleware");
-const {userRes} = require("../utils/userResponse")
+const { userRes } = require("../utils/userResponse");
 
-
-
-const {uploadSingleImage} = require("../middlewares/uploadImageMiddleware")
+const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
 const cloudinary = require("../utils/cloudinary");
 
+exports.uploadUserImage = uploadSingleImage("users", "profileImg");
 
-exports.uploadUserImage = uploadSingleImage('users','profileImg');
-
-exports.uploadUserImageToCloudinary = async(req,res,next)=>{
+exports.uploadUserImageToCloudinary = async (req, res, next) => {
   // if updated  key not image so no req.file will be founded
-  if(!req.file){
+  if (!req.file) {
     return next();
-  }   
+  }
   try {
-    const customFileName = `user-${uuidv4()}-${Date.now()}`;  // You can create your own naming scheme
+    const customFileName = `user-${uuidv4()}-${Date.now()}`; // You can create your own naming scheme
 
-    const result = await cloudinary.uploader.upload(req.file.path,{
+    const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "users", // Optional: specify folder in Cloudinary
-      public_id: customFileName,  // Set the custom name for the image
+      public_id: customFileName, // Set the custom name for the image
       quality: "auto", // Optional: set quality
       width: 600, // Optional: resize image width
       height: 600, // Optional: resize image height
       crop: "fill", // Optional: crop the image
     });
 
-    req.body.profileImg =   {
-      url: result.secure_url,       
-      public_id: result.public_id,  
+    req.body.profileImg = {
+      url: result.secure_url,
+      public_id: result.public_id,
     };
 
-    next()
-
-  }catch(err){
+    next();
+  } catch (err) {
     fs.unlinkSync(req.file.path); // Remove local file after successful upload
-      return next(new ApiError(`Failed to upload  to cloudinary ${err.message}`,500));
-
+    return next(
+      new ApiError(`Failed to upload  to cloudinary ${err.message}`, 500)
+    );
   }
-
-}
-
+};
 
 //admin
-
 
 // @desc    Get list of users
 // @route   GET /api/v1/users
@@ -76,12 +70,11 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     req.params.id,
     {
       name: req.body.name,
-      slug:req.body.slug,
+      slug: req.body.slug,
       phone: req.body.phone,
       email: req.body.email,
       role: req.body.role,
-      profileImg:req.body.profileImg
-
+      profileImg: req.body.profileImg,
     },
     { new: true }
   );
@@ -142,9 +135,6 @@ exports.activateUser = asyncHandler(async (req, res, next) => {
   res.status(200).json({ status: "success", data: activate });
 });
 
-
-
-
 //user
 
 // @desc    Get Logged user data
@@ -157,8 +147,6 @@ exports.getLoggedUserData = async (req, res, next) => {
   next();
 };
 
-
-
 // @desc    Update logged user data (without password, role)
 // @route   PUT /api/v1/users/updateMe
 // @access  Private/user
@@ -170,8 +158,7 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
       slug: req.body.slug,
       email: req.body.email,
       phone: req.body.phone,
-      profileImg:req.body.profileImg
-
+      profileImg: req.body.profileImg,
     },
     { new: true }
   );
@@ -180,7 +167,9 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
     return next(new ApiError(`there is no user with id ${req.user._id}`, 404));
   }
 
-  res.status(200).json({ status: "success", data: userRes(updateLoggedUserData) });
+  res
+    .status(200)
+    .json({ status: "success", data: userRes(updateLoggedUserData) });
 });
 
 // @desc    Update logged user password
@@ -208,7 +197,6 @@ exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
     .status(200)
     .json({ status: "success", data: updatePassword, token: token });
 });
-
 
 // @desc    Deactivate logged user
 // @route   DELETE /api/v1/users/deactivateMe

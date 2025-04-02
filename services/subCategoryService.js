@@ -25,7 +25,6 @@ exports.uploadSubCategoryImageToCloudinary = async(req,res,next)=>{
   }   
   try {
     const customFileName = `subCategory-${uuidv4()}-${Date.now()}`;  // You can create your own naming scheme
-    console.log(req.file.path)
     const result = await cloudinary.uploader.upload(req.file.path,{
       folder: "subCategories", // Optional: specify folder in Cloudinary
       public_id: customFileName,  // Set the custom name for the image
@@ -78,17 +77,17 @@ exports.getSubCategories = getAll(SubCategory);
 
 // @desc    Create subCategory
 // @route   POST  /api/v1/subcategories
-// @access  Private
+// @access  Private/Admin
 exports.createSubCategory = createOne(SubCategory);
 
 // @desc    Update specific subcategory
 // @route   PUT /api/v1/subcategories/:id
-// @access  Private
+// @access  Private/Admin
 exports.updateSubCategory = updateOne(SubCategory);
 
 // @desc    Delete specific subCategory
 // @route   DELETE /api/v1/subcategories/:id
-// @access  Private
+// @access  Private/Admin
 exports.deleteSubCategory = deleteOne(SubCategory);
 
 // @desc    Get specific subcategory by id

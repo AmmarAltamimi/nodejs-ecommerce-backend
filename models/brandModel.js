@@ -1,7 +1,20 @@
 const mongoose = require("mongoose");
+const Product = require("./productModel")
 
 const brandSchema = new mongoose.Schema(
   {
+    category: {
+          type: mongoose.Schema.ObjectId,
+          ref: "category",
+          required: [true, "category required"],
+        },
+     subCategories: [
+          {
+            type: mongoose.Schema.ObjectId,
+            ref: "SubCategory",
+            required: [true, "subcategory required"],
+          },
+        ],
     name: {
       type: String,
       required: [true, "brand required"],
@@ -24,6 +37,19 @@ const brandSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+brandSchema.pre(["findOneAndDelete", "deleteMany"], async function (next) {
+  const brands = await this.model.find(this.getQuery()); 
+  
+
+  if (brands.length > 0) {
+    const brandIds = brands.map((p) => p._id);
+    await Product.deleteMany({ brand: { $in: brandIds } }); ;
+
+  }
+
+  next();
+});
 
 const BrandModel = mongoose.model("brand", brandSchema);
 

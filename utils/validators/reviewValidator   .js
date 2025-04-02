@@ -1,22 +1,22 @@
 const { check } = require("express-validator");
 
-const {
-  validatorMiddleware,
-} = require("../../middlewares/validatorMiddleware");
+const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Product = require("../../models/productModel");
 const User = require("../../models/userModel");
 const Review = require("../../models/reviewModel");
 const {
-  isRefBelongsToModel,
+  ensureDocumentExistsById,
   checkIfUserReviewedProduct,
-  validateUserReviewOwnership,
+  validateUserOwnership,
 } = require("./customValidator");
 
-
-exports.validatorProductId =  [
+exports.validatorProductId = [
+ 
   check("productId")
-    .isMongoId().withMessage("Invalid Product id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, Product)),
+    .optional()
+    .isMongoId()
+    .withMessage("Invalid Product id format")
+    .custom((val, { req }) => ensureDocumentExistsById(val, req, Product)),
   validatorMiddleware,
 ];
 
@@ -26,7 +26,7 @@ exports.createReviewValidator = [
     .withMessage("review title required")
     .isLength({ min: 2 })
     .withMessage("too short product title")
-    .isLength({ max: 32 })
+    .isLength({ max: 200  })
     .withMessage("too long product title"),
   check("ratings")
     .notEmpty()
@@ -36,13 +36,13 @@ exports.createReviewValidator = [
   check("user")
     .isMongoId()
     .withMessage("Invalid user id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, User)),
+    .custom((val, { req }) => ensureDocumentExistsById(val, req, User)),
   check("product")
     .notEmpty()
     .withMessage("product required")
     .isMongoId()
     .withMessage("Invalid product id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, Product))
+    .custom((val, { req }) =>ensureDocumentExistsById(val, req, Product))
     .custom(async (productId, { req }) =>
       checkIfUserReviewedProduct(productId, req, Review)
     ),
@@ -54,25 +54,25 @@ exports.updateReviewValidator = [
     .isMongoId()
     .withMessage("Invalid Review id format")
     .custom(async (reviewId, { req }) =>
-      validateUserReviewOwnership(reviewId, req, Review)
+      validateUserOwnership(reviewId, req, Review)
     ),
   check("title")
     .optional()
     .isLength({ min: 2 })
     .withMessage("too short review title")
-    .isLength({ max: 32 })
+    .isLength({ max: 200  })
     .withMessage("too long review title"),
   check("ratings").optional().isFloat({ min: 1, max: 5 }),
   check("user")
     .optional()
     .isMongoId()
     .withMessage("Invalid user id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, User)),
+    .custom((val, { req }) => ensureDocumentExistsById(val, req, User)),
   check("product")
     .optional()
     .isMongoId()
     .withMessage("Invalid product id format")
-    .custom((val, { req }) => isRefBelongsToModel(val, req, Product))
+    .custom((val, { req }) => ensureDocumentExistsById(val, req, Product))
     .custom(async (productId, { req }) =>
       checkIfUserReviewedProduct(productId, req, Review)
     ),
@@ -85,8 +85,7 @@ exports.deleteReviewValidator = [
     .withMessage("Invalid Review id format")
     .custom(async (reviewId, { req }) => {
       if (req.user.role === "user") {
-        console.log("im user");
-        await validateUserReviewOwnership(reviewId, req, Review);
+        await validateUserOwnership(reviewId, req, Review);
       }
       return true;
     }),
@@ -97,3 +96,14 @@ exports.getReviewValidator = [
   check("id").isMongoId().withMessage("Invalid Review id format"),
   validatorMiddleware,
 ];
+
+
+exports.updateLikesReviewValidator = [
+  check("id")
+  .isMongoId()
+  .withMessage("Invalid Review id format")
+  .custom(async (reviewId, { req }) =>
+    validateUserOwnership(reviewId, req, Review)
+  ),
+  validatorMiddleware,
+]

@@ -1,63 +1,293 @@
-const asyncHandler =require("express-async-handler");
+const asyncHandler = require("express-async-handler");
 const ApiError = require("../utils/apiError");
-const Cart = require("../models/cartModel")
-const Product = require("../models/productModel")
-const Coupon = require("../models/couponModel")
+const Cart = require("../models/cartModel");
+const Product = require("../models/productModel");
+const Coupon = require("../models/couponModel");
+const Store = require("../models/storeModel");
+const ShippingRate = require("../models/shippingRateModel");
+const {getShippingDatesRange} = require("../utils/shippingDatesRange")
 
-
-//validateAndApplyCoupon
-async function validateAndApplyCoupon(cart,next){
-    console.log("hello");
-    if(cart.appliedCoupon){
-        console.log("hello1");
-        console.log(cart.appliedCoupon);
+// calculate the shippingFee & additionalFee and other shipping details for specific product
+//(to get shipping details for specific product i need to know two things store that have the product  and the country because each store delivered to country with diff fee based in distance )
+const calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails = async(cartItemObj)=>{
+  
+  // get product that in cartItemObj and then get   freeShippingForAllCountries and freeShippingForSpecificCountries
+  const {freeShippingForAllCountries,freeShippingForSpecificCountries,variant} = await Product.findOne({_id:cartItemObj.product})
+     // get the weight from product 
+  const {weight} = variant.find((item)=> item._id.toString() === cartItemObj.variant.toString())
+      // get the default shipping for cart store
+  const defaultShipping = await Store.findOne({_id:cartItemObj.store});
+     // first get my country then get get shipping rate for store in cart for my country 
+    // assume we have  67cda67e0edb0b1b1efe1bf5
+  const shippingRate = await ShippingRate.findOne({store:cartItemObj.store,country:"67cda67e0edb0b1b1efe1bf5"})
+  let shippingFeeValue ;
+  let additionalFeeValue ;
+  
+  
+        if(freeShippingForAllCountries ||freeShippingForSpecificCountries.includes("67cda67e0edb0b1b1efe1bf5")){
+           shippingFeeValue = 0
+           additionalFeeValue = 0
+        }
         
-        const coupon = await Coupon.findOne({name:cart.appliedCoupon,expire:{$gt:Date.now()}});
-        if(!coupon){
-            cart.totalPriceAfterDiscount = undefined;
-            return ;
+        else if(cartItemObj.snapshot.shippingFeeMethod === "fixed"){
+           shippingFeeValue = shippingRate?.shippingFeeFixed ||  defaultShipping.defaultShippingFeeFixed 
+           additionalFeeValue = 0
+        } else if(cartItemObj.snapshot.shippingFeeMethod === "weight"){
+         shippingFeeValue = shippingRate?.shippingFeePerKg ||  defaultShipping.defaultShippingFeePerKg // per 1 wight
+          shippingFeeValue *= weight // per variantWeight wight
+          additionalFeeValue = 0
+        }else if (cartItemObj.snapshot.shippingFeeMethod === "item"){
+          
+           shippingFeeValue = shippingRate?.shippingFeePerItem ||  defaultShipping.defaultShippingFeePerItem
+           additionalFeeValue =  shippingRate?.shippingFeeForAdditionalItem ||  defaultShipping.defaultShippingFeeForAdditionalItem
+        }
+  
+
+        // get deliveryTimeMin and deliveryTimeMax
+        const deliveryTimeMin = shippingRate?.deliveryTimeMin ||  defaultShipping.defaultDeliveryTimeMin
+        const deliveryTimeMax = shippingRate?.deliveryTimeMax ||  defaultShipping.defaultDeliveryTimeMax;
+        // Returns the shipping date range by adding the specified min and max days to the current date.
+        const {minDate,maxDate} = getShippingDatesRange(deliveryTimeMin,deliveryTimeMax,new Date())
+        return {
+         shippingFeeValue ,
+          additionalFeeValue ,
+          returnPolicy:shippingRate?.returnPolicy ||  defaultShipping.defaultReturnPolicy,
+          shippingService:shippingRate?.shippingService ||  defaultShipping.defaultShippingService,
+          deliveryTimeMin:minDate,
+          deliveryTimeMax:maxDate,
+
         }
 
-        const couponDiscount = cart.totalPrice * (coupon.discount /100).toFixed(2); 
-        cart.totalPriceAfterDiscount =cart.totalPrice- couponDiscount;
-       
-       
-    }
-
-    
-}
-
-// getTotalPrice
-async function getTotalPrice(cart){
-    let total = 0 ;
-    cart.cartItem.forEach((item)=> {
-        total += item.price * item.quantity
-    })
-    cart.totalPrice = total
-    await validateAndApplyCoupon(cart)
 
 }
 
-// to check  if there size available to increase the quantity
-const checkSizeCount = async (req,res,next)=>{
-    const {productId} = req.params
-    const {colorWithSize,quantity} = req.body
 
-    const product = await Product.findById(productId)
-    const colorObj = product.colors.find((color)=> color.name === colorWithSize[0])
-    if(!colorObj){
-        throw new ApiError(`Color with size not available`,400);
-    }
-    const sizeObj = colorObj.sizes.find((size)=>  size.name === colorWithSize[1])
-    if(!sizeObj) {
-        throw new ApiError(`Size not available`,400);
-    }
+// calculate TotalPrice and ShippingFees for total cartItem
+const  calculateTotalPriceWithShippingFee = (cartItems) => {
+  let subTotalValue = 0, shippingFeesValue = 0;
 
-    if(sizeObj.count < quantity){
-        throw new ApiError(`Not enough ${colorWithSize[1]} for ${colorWithSize[0]} in stock`,400);
+  cartItems.forEach(cartItem => {
+    if (cartItem.status === "available") {
+      
+      subTotalValue += cartItem.snapshot.price * cartItem.quantity;
+
+      if (cartItem.snapshot.shippingFeeMethod === "item") {
+        shippingFeesValue += cartItem.shippingFee + (cartItem.additionalFee * (cartItem.quantity - 1));
+      } else if(cartItem.snapshot.shippingFeeMethod === "fixed"){
+        shippingFeesValue += cartItem.shippingFee ; // no quantity apply in fixed
+      }
+      else {
+        shippingFeesValue += cartItem.shippingFee * cartItem.quantity;
+      }
+    }
+  });
+  
+
+  return { subTotalValue, shippingFeesValue };
+}
+
+
+const getNewTotalPriceAfterCouponDiscount = (coupon,cart) => {
+  // get store for this coupon to apply coupon in cartItemObj that have same store  
+  const {store} = coupon;
+  // get cartItemObj that have only store id coupon
+  const storeItems = cart.cartItem.filter(
+    (item) => item.store.toString() === store.toString()
+  );
+
+  if (storeItems.length === 0) {
+    throw new ApiError("No items in the cart belong to the store associated with this coupon.", 404);
+
+  }
+// calculate TotalPrice and ShippingFees for storeItems
+  const storeTotalPriceAndShippingFee = calculateTotalPriceWithShippingFee(storeItems)
+  const storeTotal = storeTotalPriceAndShippingFee.subTotalValue + storeTotalPriceAndShippingFee.shippingFeesValue;
+  
+  // we do this for following senario : if the user apply coupon will get totalPrice after discount if its apply again will abstract from discount one so
+  // i need to ensure to apply the discount on the cart total price
+  const { subTotalValue, shippingFeesValue } = calculateTotalPriceWithShippingFee(cart.cartItem)
+  cart.total =  subTotalValue + shippingFeesValue
+  
+  // get discountedAmount value
+  const discountedAmount = (storeTotal * coupon.discount) / 100;
+
+  // get Total price by abstract the discountedAmount from total price
+  const newTotal = cart.total - discountedAmount;
+
+  return newTotal;
+} 
+
+
+
+async function updateCartWithLatest(cart) {
+  // >> update the cart item
+  const updatedCartItem = await Promise.all(
+    cart.cartItem.map(async (cartItemObj) => {
+        // 1. Check if all references exist; if not, mark status as "unavailable".
         
+        // Check store reference
+        const store = await Store.findOne({ _id: cartItemObj.store });
+        if (!store) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+        // Check product reference
+        const product = await Product.findOne({ _id: cartItemObj.product });
+        if (!product) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+        // Check variant reference
+        const variant = product.variant.find(
+          (item) => item._id.toString() === cartItemObj.variant.toString()
+        );
+        if (!variant) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+
+        // 2. Check if the variant is out of stock
+        if (variant.stockQuantity === 0) {
+          cartItemObj.status = "out_of_stock";
+          return cartItemObj;
+        }
+
+        // 3. check the reset of keys that are related to the ref 
+
+        // A. Product-related keys
+        cartItemObj.snapshot.productName = product.title;
+        cartItemObj.snapshot.shippingFeeMethod = product.shippingFeeMethod;
+        // B. Variant-related keys
+        cartItemObj.snapshot.variantName = variant.variantTitle;
+        cartItemObj.snapshot.price = variant.isSale ? variant.salePrice : variant.price;
+        cartItemObj.snapshot.imageCover = variant.imageCover;
+         // variant stockQuantity and quantity 
+        // Ensure quantity does not exceed stockQuantity
+        //  we need to see if quantity > stockQuantity then we will make quantity same stockQuantity
+        //because i dont need   quantity > stockQuantity or i can use math min to take the less one
+        // so if quantity less i will take if its hight then i will make it same stockQuantity
+      
+        
+        cartItemObj.quantity = Math.min(cartItemObj.quantity, variant.stockQuantity);
+
+         // 4. check the keys that will changed will you change the above keys
+         //  change of shippingFeeMethod will change shippingFee , additionalFee , shippingFees
+        //  change of price and quantity  will change shippingFees , subTotal , total
+
+        // A Recalculate shipping fees
+        const { shippingFeeValue, additionalFeeValue } = await calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails(cartItemObj);
+        cartItemObj.shippingFee = shippingFeeValue;
+        cartItemObj.additionalFee = additionalFeeValue;
+
+        return cartItemObj; // Return the updated object
+    })
+  );
+
+  // Update cart items
+  cart.cartItem = updatedCartItem;
+
+  // B Recalculate subTotal, shippingFees, and total
+  const { subTotalValue, shippingFeesValue } =  calculateTotalPriceWithShippingFee(cart.cartItem);
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
+
+  return cart
+}
+
+
+// same updateCartWithLatest but only step 5 i new which check apply coupon because in updateCartWithLatest we dont need to check
+async function updateCartWithLatestForCheckout(cart)  {
+  // >> update the cart item
+  const updatedCartItem = await Promise.all(
+    cart.cartItem.map(async (cartItemObj) => {
+        // 1. Check if all references exist; if not, mark status as "unavailable".
+        
+        // Check store reference
+        const store = await Store.findOne({ _id: cartItemObj.store });
+        if (!store) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+        // Check product reference
+        const product = await Product.findOne({ _id: cartItemObj.product });
+        if (!product) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+        // Check variant reference
+        const variant = product.variant.find(
+          (item) => item._id.toString() === cartItemObj.variant.toString()
+        );
+        if (!variant) {
+          cartItemObj.status = "unavailable";
+          return cartItemObj;
+        }
+
+        // 2. Check if the variant is out of stock
+        if (variant.stockQuantity === 0) {
+          cartItemObj.status = "out_of_stock";
+          return cartItemObj;
+        }
+
+        // 3. check the reset of keys that are related to the ref 
+
+        // A. Product-related keys
+        cartItemObj.snapshot.productName = product.title;
+        cartItemObj.snapshot.shippingFeeMethod = product.shippingFeeMethod;
+        // B. Variant-related keys
+        cartItemObj.snapshot.variantName = variant.variantTitle;
+        cartItemObj.snapshot.price = variant.isSale ? variant.salePrice : variant.price;
+        cartItemObj.snapshot.imageCover = variant.imageCover;
+         // variant stockQuantity and quantity 
+        // Ensure quantity does not exceed stockQuantity
+        //  we need to see if quantity > stockQuantity then we will make quantity same stockQuantity
+        //because i dont need   quantity > stockQuantity or i can use math min to take the less one
+        // so if quantity less i will take if its hight then i will make it same stockQuantity
+      
+        
+        cartItemObj.quantity = Math.min(cartItemObj.quantity, variant.stockQuantity);
+
+         // 4. check the keys that will changed will you change the above keys
+         //  change of shippingFeeMethod will change shippingFee , additionalFee , shippingFees
+        //  change of price and quantity  will change shippingFees , subTotal , total
+
+        // A Recalculate shipping fees
+        const { shippingFeeValue, additionalFeeValue } = await calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails(cartItemObj);
+        cartItemObj.shippingFee = shippingFeeValue;
+        cartItemObj.additionalFee = additionalFeeValue;
+
+        return cartItemObj; // Return the updated object
+    })
+  );
+
+  // Update cart items
+  cart.cartItem = updatedCartItem;
+
+  // B Recalculate subTotal, shippingFees, and total
+  const { subTotalValue, shippingFeesValue } =  calculateTotalPriceWithShippingFee(cart.cartItem);
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
+
+    //5. check if there coupon apply then will Recalculate total after discountCoupon
+    if(cart.appliedCoupon){
+      const coupon = await Coupon.findOne({
+        name:cart.appliedCoupon,
+        start: { $lt: Date.now() },
+        expire: { $gt: Date.now() },
+      });
+      if (!coupon) {
+        cart.appliedCoupon = ""
+        return
+      }
+  
+      const newTotal = getNewTotalPriceAfterCouponDiscount(coupon,cart)
+      cart.total = newTotal;
+    
     }
 
+  return cart
 }
 
 
@@ -65,157 +295,305 @@ const checkSizeCount = async (req,res,next)=>{
 // @desc    Get logged user cart
 // @route   GET /api/v1/cart
 // @access  Private/User
-exports.getLoggedUserCart = asyncHandler(async(req,res,next)=>{
-        const cart = await Cart.findOne({user:req.user._id}).populate({path:"cartItem.product",select:"title description"});
-        if(!cart){
-            return next(new ApiError(`Cart not found with id ${req.user._id}`,404));
-        }
-        res.status(200).json({status : "success",numOfCartItems:cart.cartItem.length,data:cart});
-})
+const  getLoggedUserCart = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({ user: req.user._id }).populate({
+    path: "cartItem.product",
+    select: "title description",
+  });
 
+    const updatedCart = await updateCartWithLatest(cart);
+
+  await updatedCart.save()
+
+  res.status(200).json({
+    status: "success",
+    numOfCartItems: updatedCart?.cartItem.length || 0,
+    data: updatedCart || [],
+  });
+});
+
+// @desc    Get logged user cart
+// @route   GET /api/v1/cart
+// @access  Private/User
+const getLoggedUserCartForCheckout = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({ user: req.user._id }).populate({
+    path: "cartItem.product",
+    select: "title description",
+  });
+
+    const updatedCart = await updateCartWithLatestForCheckout(cart);
+
+  await updatedCart.save()
+
+  res.status(200).json({
+    status: "success",
+    numOfCartItems: updatedCart?.cartItem.length || 0,
+    data: updatedCart || [],
+  });
+});
 
 // @desc    Add product to  cart
 // @route   POST /api/v1/cart
 // @access  Private/User
-exports.addProductToCart = asyncHandler(async(req,res,next)=>{
-    const product = await Product.findOne({id:req.body.product})
+const addProductToCart = asyncHandler(async (req, res, next) => {
+  const { productId, variantId, qty } = req.body;
 
-    let cart = await Cart.findOne({id: req.user._id});
-    if(!cart){
-        cart = await Cart.create({
-            user:req.user._id,
-            cartItem:[{
-                product : req.body.product,
-                price : product.price,
-                colorWithSize:req.body.colorWithSize
-            }],
+  const product = await Product.findOne({ _id: productId });
+  if (!product) {
+    return next(new ApiError(`Product not found with id ${productId}`, 404));
+  }
 
-       })
-    }else{
+  // get the variantObj to get details info
+  const variantObj = product.variant.find(
+    (variant) => variant._id.toString() === variantId
+  );
+  if (!variantObj) {
+    return next(
+      new ApiError(`Product variant not found with id ${variantId}`, 404)
+    );
+  }
 
-        const findIndex = cart.cartItem.findIndex((item)=> item.product.toString() === req.body.product && item.colorWithSize === req.body.colorWithSize );
-        if(findIndex > -1){
-            cart.cartItem[findIndex].quantity +=1
-    
-        }else{
-            cart.cartItem.push({product : req.body.product,price : product.price,});
-    
-        }
+
+  let cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+
+    cart = await Cart.create({
+      user: req.user._id,
+      cartItem: [
+        {
+          product: productId,
+          variant: variantId,
+          store: product.store,
+          quantity: qty,
+          snapshot:{
+            productName:product.title,
+            variantName:variantObj.variantTitle,
+            price: variantObj.isSale ? variantObj.salePrice :variantObj.price,          
+            imageCover: {
+              url: variantObj.imageCover.url,
+              public_id: variantObj.imageCover.public_id,
+            },
+            shippingFeeMethod:product.shippingFeeMethod
+          }
+ 
+        },
+      ],
+    });
+ 
+
+
+    // calculate the shippingFee & additionalFee for cartItem obj
+    const { shippingFeeValue ,additionalFeeValue }= await calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails(cart.cartItem[0])
+    cart.cartItem[0].shippingFee = shippingFeeValue
+    cart.cartItem[0].additionalFee = additionalFeeValue
+  } else {
+    const cartItemObj = cart.cartItem.find((item) =>item.product.toString() === productId &&  item.variant.toString() === variantId );
+    if (cartItemObj) {
+      // make sure qty + quantity is less than stockQuantity
+      if (variantObj.stockQuantity < qty + cartItemObj.quantity) {
+        return next(
+          new ApiError(
+            `you can not add more than ${variantObj.stockQuantity - cartItemObj.quantity} of this product in your cart `,
+            404
+          )
+        );
+      }
+
+      cartItemObj.quantity += qty;
+      // calculate the shippingFee & additionalFee for cartItem obj
+      const { shippingFeeValue ,additionalFeeValue }= await calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails(cartItemObj)
+      cartItemObj.shippingFee = shippingFeeValue
+      cartItemObj.additionalFee = additionalFeeValue
+    } else {
+      cart.cartItem.push({
+          product: productId,
+          variant: variantId,
+          store: product.store,
+          quantity: qty,
+          snapshot:{
+            productName:product.name,
+            variantName:variantObj.variantName,
+            price: variantObj.isSale ? variantObj.salePrice :variantObj.price,          
+            imageCover: {
+              url: variantObj.imageCover.url,
+              public_id: variantObj.imageCover.public_id,
+            },
+            shippingFeeMethod:product.shippingFeeMethod
+
+          }
+      });
+      // calculate the shippingFee & additionalFee for cartItem obj
+      const lengthOfCartItem = cart.cartItem.length
+      const lastCartItemObj = cart.cartItem[lengthOfCartItem - 1]
+      const { shippingFeeValue ,additionalFeeValue }= await calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails(lastCartItemObj)
+      
+      lastCartItemObj.shippingFee = shippingFeeValue
+      lastCartItemObj.additionalFee = additionalFeeValue
     }
+  }
 
+  // calculate the shippingFee for each cartItem + total shippingFees and total price 
+  const { subTotalValue, shippingFeesValue } = calculateTotalPriceWithShippingFee(cart.cartItem);
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
 
-    // calculate the total price 
-    await getTotalPrice(cart)
+  const newCart = await cart.save();
 
-
-    const newCart = await cart.save();
-
-    res.status(201).json({status : "success",numOfCartItems:cart.cartItem.length,data:newCart});
-
-})
-
+  res.status(201).json({
+    status: "success",
+    numOfCartItems: newCart.cartItem.length,
+    data: newCart,
+  });
+});
 
 // @desc    clear logged user cart
 // @route   DELETE /api/v1/cart
 // @access  Private/User
-exports.clearCart =  asyncHandler(async(req,res,next)=>{
-    const cart = await Cart.findOneAndDelete({user:req.user._id});
-    if(!cart){
-        return next(new ApiError(`Cart not found with id ${req.user._id}`,404));
-    }
+const clearCart = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOneAndDelete({ user: req.user._id });
+  if (!cart) {
+    return next(new ApiError(`Cart not found with id ${req.user._id}`, 404));
+  }
 
-    res.status(200).json({status:"success",message:"Cart removed successfully"});
-
-
-})
-
+  res
+    .status(200)
+    .json({ status: "success", message: "Cart removed successfully" });
+});
 
 // @desc    Update specific cart item quantity
 // @route   PUT /api/v1/cart/:itemId
 // @access  Private/User
-exports.updateCartItemQuantity = asyncHandler(async(req,res,next)=>{ 
-    const cart = await Cart.findOne({user:req.user._id});
-    if(!cart){
-        return next(new ApiError(`Cart not found with id ${req.user._id}`,404));
-    }
-    
- 
-    // to check  if there size available to increase the quantity
-       await checkSizeCount(req,res,next)
+const updateCartItemQuantity = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+    return next(new ApiError(`Cart not found with id ${req.user._id}`, 404));
+  }
 
-    const findIndex = cart.cartItem.findIndex((item)=> item.product.toString() === req.params.productId);
-    if(findIndex > -1){
-        cart.cartItem[findIndex].quantity = req.body.quantity;
-    }else{
-        return next(new ApiError(`Item with id ${req.params.productId} not found in cart`,404));
-    }
+  const findIndex = cart.cartItem.findIndex(
+    (item) => item._id.toString() === req.params.cartId
+  );
+  if (findIndex > -1) {
+    cart.cartItem[findIndex].quantity = req.body.qty;
+  } else {
+    return next(
+      new ApiError(
+        `Item with id ${req.params.cartId} not found in cart`,
+        404
+      )
+    );
+  }
 
-    // calculate the total price 
-    await getTotalPrice(cart)
+// calculate TotalPrice and ShippingFees for total cartItem
+const { subTotalValue, shippingFeesValue } = calculateTotalPriceWithShippingFee(cart.cartItem);
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
 
 
-    const updateCart = await cart.save();
+  const updateCart = await cart.save();
 
-    res.status(200).json({status:"success",data:updateCart});
-
-
-})
-
+  res.status(200).json({ status: "success", data: updateCart });
+});
 
 // @desc    Remove specific cart item
 // @route   DELETE /api/v1/cart/:itemId
 // @access  Private/User
-exports.removeSpecificCartItem =  asyncHandler(async(req,res,next)=>{
-    
-    const cart = await Cart.findOneAndUpdate({user:req.user._id},{
+const removeSpecificCartItem = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOneAndUpdate(
+    { user: req.user._id },
+    {
+      $pull: { cartItem: { _id: req.params.cartId } },
+    },
+    { new: true }
+  );
 
-        $pull:{cartItem:{_id:req.params.productId}}
+  if (!cart) {
+    return next(
+      new ApiError(
+        `Item with id ${req.params.cartId} not found in cart`,
+        404
+      )
+    );
+  }
 
-    },{new:true})
+  // calculate TotalPrice and ShippingFees for total cartItem
+const { subTotalValue, shippingFeesValue } = calculateTotalPriceWithShippingFee(cart.cartItem);
 
-    if(!cart){
-        return next(new ApiError(`Item with id ${req.params.productId} not found in cart`,404));
-    }
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
 
-    
-     // calculate the total price 
-     await getTotalPrice(cart)
+  await cart.save();
 
-
-    await cart.save();
-
-
-    res.status(200).json({status:"success",numOfCartItems:cart.cartItem.length,message:"Item removed successfully from cart"});
-
-})
-
+  res.status(200).json({
+    status: "success",
+    numOfCartItems: cart.cartItem.length,
+    message: "Item removed successfully from cart",
+  });
+});
 
 // @desc    Apply coupon on logged user cart
 // @route   PUT /api/v1/cart/applyCoupon
 // @access  Private/User
-exports.applyCoupon = asyncHandler(async(req,res,next)=>{
-    const coupon = await Coupon.findOne({name:req.body.name,expire:{$gt:Date.now()}});
-    if(!coupon){
-        return next(new ApiError("Coupon not found",404));
-    }
+const applyCoupon = asyncHandler(async (req, res, next) => {
+  const coupon = await Coupon.findOne({
+    name: req.body.name,
+    start: { $lt: Date.now() },
+    expire: { $gt: Date.now() },
+  });
+  if (!coupon) {
+    return next(new ApiError("Coupon not found or expired", 404));
+  }
 
-    const cart = await Cart.findOne({user:req.user._id});
-    if (!cart) {
-        return next(new ApiError('Cart not found', 404));
-      }
-
-      cart.appliedCoupon = req.body.name;
-      console.log(cart.appliedCoupon)
-      
-    const couponDiscount = cart.totalPrice * (coupon.discount /100).toFixed(2); 
-    cart.totalPriceAfterDiscount =cart.totalPrice- couponDiscount;
-
-    const updateCart = await cart.save();
-
-    res.status(200).json({status:"success",numOfCartItems:cart.cartItem.length,data:updateCart});
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+    return next(new ApiError("Cart not found", 404));
+  }
 
 
-})
+// get NewTotalPrice After CouponDiscount
+  const newTotal = getNewTotalPriceAfterCouponDiscount(coupon,cart)
+  cart.total = newTotal
+
+  
+// save name of coupon in cart 
+  cart.appliedCoupon = req.body.name;
 
 
+  const updateCart = await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    numOfCartItems: updateCart.cartItem.length,
+    data: updateCart,
+  });
+});
+
+// @desc    remove coupon on logged user cart
+// @route   PUT /api/v1/cart/removeCoupon
+// @access  Private/User
+const removeCoupon = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+    return next(new ApiError("Cart not found", 404));
+  }
+
+  if(!cart.appliedCoupon){
+    return next(new ApiError("there is no coupon apply to remove", 404));
+
+  }
+  cart.appliedCoupon = null
+
+   await cart.save();
+
+   res.status(200).json({
+    status: "coupon is removed successfully",
+    data: cart,
+  });
+});
+
+
+
+module.exports = {calculateShippingFeeAndAdditionalFeeAndOtherShippingDetails,calculateTotalPriceWithShippingFee,updateCartWithLatestForCheckout,getNewTotalPriceAfterCouponDiscount,getLoggedUserCart,getLoggedUserCartForCheckout,addProductToCart,clearCart,updateCartItemQuantity,removeSpecificCartItem,applyCoupon,removeCoupon}
 

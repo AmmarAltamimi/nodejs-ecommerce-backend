@@ -11,10 +11,19 @@ const couponSchema = new mongoose.Schema(
       trim: true,
 
     },
+    start: {
+      type: Date,
+      required: [true, "coupon start date required"],
+    },
     expire: {
       type: Date,
       required: [true, "coupon expiration date required"],
     },
+    store: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Store",
+          required: [true, "store required"],
+        },
     discount: {
       type: Number,
       required: [true, "coupon discount percentage required"],

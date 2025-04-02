@@ -6,6 +6,7 @@ const {
   getWishlists,
   addToWishlist,
   deleteWishlist,
+  clearWishlist,
 } = require("../services/wishlistService");
 const {
   createWishlistValidator,
@@ -14,11 +15,13 @@ const {
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
-router.route("/").get(protect, allowedTo("user"), getWishlists);
+router.route("/").get(protect, allowedTo("user"), getWishlists).delete(protect, allowedTo("user"), clearWishlist);
+
 router
-  .route("/:productId")
-  .post(protect, allowedTo("user"), createWishlistValidator, addToWishlist)
-  .delete(protect, allowedTo("user"), deleteWishlistValidator, deleteWishlist);
+  .route("/:productId/:variantId").post(protect, allowedTo("user"), createWishlistValidator, addToWishlist)
+
+router
+  .route("/:wishlistId").delete(protect, allowedTo("user"), deleteWishlistValidator, deleteWishlist);
 
 module.exports = router;
 //commit g

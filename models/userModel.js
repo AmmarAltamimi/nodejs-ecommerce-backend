@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const Cart = require("./cartModel");
+const Order = require("./paymentDetailsModel");
+const Store = require("./storeModel");
+const Review = require("./reviewModel");
+const Address = require("./addressModel");
 
 const userSchema = new mongoose.Schema(
   {
@@ -45,7 +50,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "manager", "admin"],
+      enum: ["user", "seller","admin"],
       default: "user",
     },
     active: {
@@ -58,47 +63,56 @@ const userSchema = new mongoose.Schema(
       },
     wishlist: [
       {
-        type: mongoose.Schema.ObjectId,
-        ref: "Product",
+        product:{
+          type: mongoose.Schema.ObjectId,
+          ref: "Product",
+          },
+          variant:{
+            type: mongoose.Schema.ObjectId,
+          },
+          snapshot: {
+            productName:{
+              type: String,
+                },
+            variantName:{
+              type: String,
+                },
+            price: {
+              type: Number,
+              min: [0, "price cannot be negative"],
+            },
+            imageCover: {
+              url: { type: String, required: [true, "image URL required"] },
+              public_id: { type: String, required: [true, "image public ID required"] },
+            }
+          }, 
+          status: { 
+            type: String, 
+            enum: ['available', 'unavailable', 'out_of_stock'],
+            default: 'available'
+          }
       },
     ],
 
-    addresses: [
-      {
-        id: mongoose.Schema.Types.ObjectId,
-        alias: {
-          type: String,
-          required: [true, "address alias required"],
-          minlength: [2, "too short address alias"],
-          maxlength: [10, "too long address alias"],
-        },
-        details: {
-          type: String,
-          required: [true, "address details required"],
-          minlength: [2, "too short address details"],
-          maxlength: [256, "too long address details"],
-        },
-        phone: {
-          type: String,
-          required: [true, "phone number required"],
-        },
-        city: {
-          type: String,
-          required: [true, "city required"],
-          minlength: [2, "too short city"],
-          maxlength: [32, "too long city"],
-        },
-        postalCode: {
-          type: String,
-          required: [true, "postal code required"],
-          minlength: [5, "too short postal code"],
-          maxlength: [10, "too long postal code"],
-        },
-      },
-    ],
+ 
   },
   { timestamps: true }
 );
+
+
+userSchema.pre("findOneAndDelete", async function (next) {
+  const user = await this.model.findOne(this.getQuery());
+
+  if (user) {
+    await Cart.deleteMany({ user: user._id });
+    await Order.deleteMany({ user: user._id });
+    await Review.deleteMany({ user: user._id });
+    await Store.deleteMany({ user: user._id });
+    await Address.deleteMany({ user: user._id });
+  }
+  next();
+});
+
 
 // Hash the password before saving the user document
 userSchema.pre("save", async function (next) {

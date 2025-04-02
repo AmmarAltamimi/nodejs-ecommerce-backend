@@ -1,10 +1,8 @@
 const { check } = require("express-validator");
+const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
+const User = require("../../models/userModel");
 const {
-  validatorMiddleware,
-} = require("../../middlewares/validatorMiddleware");
-const User = require("../../models/brandModel");
-const {
-  valueAlreadyExists,
+  ensureUniqueModelValue,
   setSlug,
   checkPasswordConfirm,
   check6DigitsResetCode,
@@ -18,13 +16,13 @@ exports.signUpValidator = [
     .withMessage("too short user name")
     .isLength({ max: 32 })
     .withMessage("too long user name")
-    .custom((val, { req }) => setSlug(val, req)),
+    .custom((val, { req }) => setSlug(val, req,User)),
   check("email")
     .isEmail()
     .withMessage("Invalid user email format")
     .notEmpty()
     .withMessage("user email required")
-    .custom((val, { req }) => valueAlreadyExists(val, req, User)),
+    .custom((val, { req }) => ensureUniqueModelValue(val, req,false, User,{email:val})),
   check("phone")
     .isMobilePhone(["ar-YE", "ar-EG", "ar-SA", "en-IN"])
     .withMessage("Invalid phone number only accepted Egy and SA Phone numbers"),
@@ -39,7 +37,6 @@ exports.signUpValidator = [
     .withMessage("password confirmation required"),
   validatorMiddleware,
 ];
-
 
 exports.loginValidator = [
   check("email")
@@ -71,7 +68,7 @@ exports.verifyPassResetCodeValidator = [
     .custom(async (resetCode, { req }) =>
       check6DigitsResetCode(resetCode, req)
     ),
-    check("email")
+  check("email")
     .isEmail()
     .withMessage("Invalid user email format")
     .notEmpty()

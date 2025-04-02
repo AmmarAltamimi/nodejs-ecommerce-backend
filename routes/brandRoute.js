@@ -18,7 +18,9 @@ const {
   deleteBrandValidator,
   getBrandValidator,
 } = require("../utils/validators/brandValidator ");
-const {validateActualTypeAndCleanFileSingleImage} = require("../middlewares/uploadImageMiddleware")
+const {
+  validateActualTypeAndCleanFileSingleImage,
+} = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
@@ -27,7 +29,7 @@ router
   .get(getBrands)
   .post(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadBrandImage,
     createBrandValidator,
     validateActualTypeAndCleanFileSingleImage,
@@ -38,19 +40,14 @@ router
   .route("/:id")
   .put(
     protect,
-    allowedTo("admin", "manager"),
+    allowedTo("admin"),
     uploadBrandImage,
     updateBrandValidator,
     validateActualTypeAndCleanFileSingleImage,
     uploadBrandImageToCloudinary,
     updateBrand
   )
-  .delete(
-    protect,
-    allowedTo("admin"),
-    deleteBrandValidator,
-    deleteBrand
-  )
+  .delete(protect, allowedTo("admin"), deleteBrandValidator, deleteBrand)
   .get(getBrandValidator, getBrand);
 
 module.exports = router;

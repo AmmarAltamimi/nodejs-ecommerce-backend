@@ -6,6 +6,7 @@ const User = require("../models/userModel");
 
 // Protect routes by checking the authorization token and validating the user.
 exports.protect = asyncHandler(async (req, res, next) => {
+  
   let token;
   if (req.headers.authorization &&  req.headers.authorization.startsWith('Bearer') ) {
      token = req.headers.authorization.split(" ")[1];

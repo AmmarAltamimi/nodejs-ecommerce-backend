@@ -34,7 +34,6 @@ router.post(
   signUp
 );
 
-
 router.post("/login", loginValidator, login);
 router.post("/forgetPassword", forgetPasswordValidator, forgetPassword);
 router.post(
@@ -42,10 +41,6 @@ router.post(
   verifyPassResetCodeValidator,
   verifyPassResetCode
 );
-router.put(
-  "/resetPassword",
-  resetPasswordValidator,
-  resetPassword
-);
+router.put("/resetPassword", resetPasswordValidator, resetPassword);
 
 module.exports = router;
