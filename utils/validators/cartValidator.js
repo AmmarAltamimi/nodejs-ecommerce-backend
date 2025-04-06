@@ -2,7 +2,7 @@ const { check } = require("express-validator");
 const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Product = require("../../models/productModel");
 const Cart = require("../../models/cartModel");
-const { ensureDocumentExistsById,ensureSubDocumentExistsById,validateUserOwnership } = require("./customValidator");
+const { ensureDocumentExistsById,ensureSubDocumentExistsById,validateUserOwnership,validateReferenceOwnership } = require("./customValidator");
 
 exports.addProductToCartValidator = [
   check("productId")
@@ -27,7 +27,10 @@ exports.updateCartItemQuantityValidator = [
     ensureSubDocumentExistsById(val, req, Cart, {user: req.user._id} , "cartItem"))
   .custom(async (cartId, { req }) =>
         validateUserOwnership(cartId, req, Cart)
-      ),
+      )
+        .custom(async (cartId, { req }) =>
+          validateReferenceOwnership(cartId, req, Cart,"store")
+        ),
   check("qty")
     .notEmpty()
     .withMessage("productId required")
@@ -42,6 +45,9 @@ exports.removeSpecificCartItemValidator = [
       ensureSubDocumentExistsById(val, req, Cart, {user: req.user._id} , "cartItem")
     ).custom(async (cartId, { req }) =>
       validateUserOwnership(cartId, req, Cart)
+    )
+    .custom(async (cartId, { req }) =>
+      validateReferenceOwnership(cartId, req, Cart,"store")
     ),
   validatorMiddleware,
 ];

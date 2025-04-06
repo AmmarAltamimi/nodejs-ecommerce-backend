@@ -2,7 +2,7 @@ const { check } = require("express-validator");
 const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Coupon = require("../../models/couponModel");
 const Store = require("../../models/storeModel");
-const { ensureUniqueModelValue,ensureDocumentExistsById,ensureStartDateLessThanExpireDate } = require("./customValidator");
+const { ensureUniqueModelValue,validateUserOwnership,ensureDocumentExistsById,validateReferenceOwnership,ensureStartDateLessThanExpireDate } = require("./customValidator");
 
 exports.createCouponValidator = [
   check("name")
@@ -33,7 +33,9 @@ exports.createCouponValidator = [
     .withMessage("store required")
     .isMongoId()
     .withMessage("Invalid store id format")
-    .custom((val, req) => ensureDocumentExistsById(val, req, Store)),
+    .custom(async (storeId, { req }) =>
+          validateUserOwnership(storeId, req, Store)
+        ),
   check("discount")
     .isInt({ min: 0, max: 100 })
     .withMessage("discount percentage must be betwenn 0 and 100")
@@ -43,7 +45,10 @@ exports.createCouponValidator = [
 ];
 
 exports.updateCouponValidator = [
-  check("id").isMongoId().withMessage("Invalid Coupon id format"),
+  check("id").isMongoId().withMessage("Invalid Coupon id format")
+       .custom(async (id, { req }) =>
+            validateReferenceOwnership(id, req, Coupon,"store")
+          ),
   check("name")
     .optional()
     .isLength({ min: 2 })
@@ -66,7 +71,9 @@ exports.updateCouponValidator = [
     .optional()
     .isMongoId()
     .withMessage("Invalid store id format")
-    .custom((val, req) => ensureDocumentExistsById(val, req, Store)),
+    .custom(async (storeId, { req }) =>
+      validateUserOwnership(storeId, req, Store)
+    ),
   check("discount")
     .isInt({ min: 0, max: 100 })
     .withMessage("discount percentage must be betwenn 0 and 100")
@@ -75,7 +82,10 @@ exports.updateCouponValidator = [
 ];
 
 exports.deleteCouponValidator = [
-  check("id").isMongoId().withMessage("Invalid coupon id format"),
+  check("id").isMongoId().withMessage("Invalid coupon id format")
+  .custom(async (id, { req }) =>
+    validateReferenceOwnership(id, req, Coupon,"store")
+  ),
   validatorMiddleware,
 ];
 

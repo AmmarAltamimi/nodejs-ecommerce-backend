@@ -369,14 +369,24 @@ exports.checkIfUserReviewedProduct = async (productId, req, Model) => {
   return true;
 };
 
-exports.validateUserOwnership = async (Id, req, Model) => {
-  const document = await Model.findById(Id);
+exports.validateUserOwnership = async (Id, req, Model,refName) => {
+  let document = await Model.findById(Id);
 
-  if (!document) {
-    throw new Error(`${Model.modelName}  not found`);
-  }
-  if (document.user._id.toString() !== req.user._id.toString()) {
+  // check owner Ship for user key
+  const documentUserId = document.user?._id.toString() || document.user?.toString();
+  if (documentUserId !== req.user._id.toString()) {
     throw new Error(`You do not have permission to perform this action on ${Model.modelName}.`);
+  }
+};
+
+exports.validateReferenceOwnership  = async (Id, req, Model,refName) => {
+  let document = Model.findById(Id).populate(refName);
+  // check owner ship for ref that has schema include user key
+    const documentUserSchema =  document[refName].user.toString()
+  if (documentUserSchema !== req.user._id.toString()) {
+    throw new Error(`You do not have permission to perform this action on ${Model.modelName}.`);
+  
+
   }
 };
 

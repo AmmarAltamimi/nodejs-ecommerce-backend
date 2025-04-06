@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Brand = require("./brandModel")
 const Product = require("./productModel")
 const SubCategory = require("./subCategoryModel")
+const cloudinary = require("../utils/cloudinary");
 
 const categoryScheme = new mongoose.Schema(
   {
@@ -40,6 +41,9 @@ categoryScheme.pre("findOneAndDelete", async function (next) {
   const category = await this.model.findOne(this.getQuery());
 
   if (category) {
+    // delete image for category from cloudinary
+    await cloudinary.uploader.destroy(category.image.public_id);
+    
     await Brand.deleteMany({ category: category._id });
     await SubCategory.deleteMany({ category: category._id });
     await Product.deleteMany({ category: category._id });

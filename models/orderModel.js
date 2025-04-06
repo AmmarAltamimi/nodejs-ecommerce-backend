@@ -56,6 +56,9 @@ orderSchema.pre(/^find/, function (next) {
     path: 'user',
     select: 'name profileImg email phone',
   });
+  this.populate({
+    path: 'shippingAddress',
+  });
 
   next();
 });

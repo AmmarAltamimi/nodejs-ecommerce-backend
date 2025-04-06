@@ -31,6 +31,7 @@ offerTagScheme.pre("findOneAndDelete", async function (next) {
   const offerTag = await this.model.findOne(this.getQuery());
 
   if (offerTag) {
+
     await Product.updateMany(
       { offerTags: offerTag._id },
       { $pull: { offerTags: offerTag._id } }

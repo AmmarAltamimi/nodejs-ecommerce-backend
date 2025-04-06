@@ -10,6 +10,7 @@ const {
   // updateProductVariant,
   deleteProduct,
   getProduct,
+  getFilterOptions,
   uploadProductImagePart1,
   uploadProductImagePart2,
   uploadProductImagesToCloudinary,
@@ -20,6 +21,7 @@ const {
   // updatedProductValidator,
   deleteProductValidator,
   getProductValidator,
+  getFilterOptionsValidator,
 } = require("../utils/validators/productValidator  ");
 const {
   validateActualTypeAndCleanFileMixOfImages,
@@ -49,6 +51,7 @@ router
   
   router.route("/default").get(getProductsWithItsDefaultVariant)
 
+
 router
   .route("/:id")
   .put(
@@ -63,6 +66,7 @@ router
   )
   .delete(protect, allowedTo("seller"), deleteProductValidator, deleteProduct)
 
+  router.route("/:subcategoryType/filter-options").get(getFilterOptionsValidator, getFilterOptions )
   router.route("/:id/:variantId").get(getProductValidator, getProduct)
 
 // router

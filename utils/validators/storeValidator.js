@@ -63,8 +63,8 @@ exports.updateStoreValidator = [
   check("id")
     .isMongoId()
     .withMessage("Invalid Store id format")
-    .custom(async (reviewId, { req }) =>
-      validateUserOwnership(reviewId, req, Store)
+    .custom(async (storeId, { req }) =>
+      validateUserOwnership(storeId, req, Store)
     ),
   check("name")
     .optional()
@@ -110,9 +110,9 @@ exports.deleteStoreValidator = [
   check("id")
     .isMongoId()
     .withMessage("Invalid category id format")
-    .custom(async (reviewId, { req }) => {
+    .custom(async (storeId, { req }) => {
       if (req.user.role === "seller") {
-        await validateUserOwnership(reviewId, req, Store);
+        await validateUserOwnership(storeId, req, Store);
       }
       return true;
     }),

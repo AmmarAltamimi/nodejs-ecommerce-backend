@@ -2,6 +2,9 @@ const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const asyncHandler = require("express-async-handler");
 const Product = require("../models/productModel");
+const Brand = require("../models/brandModel");
+const OfferTag = require("../models/offerTagModel");
+const Store = require("../models/storeModel");
 const ApiFeature = require("../utils/apiFeatures");
 
 const {
@@ -375,7 +378,72 @@ exports.getProduct = asyncHandler(async (req, res, next) => {
 
 
 
+// @desc    get Filter Options
+// @route   PUT /api/v1/products/:id/filter-options
+// @access  Public
+exports.getFilterOptions = asyncHandler(async (req, res, next) => {
 
+  const { subcategoryType } = req.params; 
+  const filterFieldsBySubcategory = {
+    phone: ["color","storageCapacity","ramSize","networkType","operatingSystem","batteryCapacity","screenSize",],
+    laptop: ["color", "ramSize", "processorBrand", "processorType", "hardDiskCapacity", "storageType", "operatingSystem", "screenSize",],
+    men: ["color", "size", "material"],
+    women: ["color", "size", "material"],
+  };
+
+  const fieldsToBeTheFilter = filterFieldsBySubcategory[subcategoryType];
+
+
+  const filterOptions = {};
+  await Promise.all(
+    fieldsToBeTheFilter.map(async (field) => {
+      filterOptions[field] = await Product.distinct(`variant.${field}`, { subcategoryType });
+    })
+  );
+
+ const brandsIds = await Product.distinct("brand", {
+  subcategoryType,
+});
+filterOptions.brands = await Brand.find({_id:{$in:brandsIds}}).select("_id name")
+
+
+
+const offerTagsIds = await Product.distinct("offerTag", {
+  subcategoryType,
+});
+filterOptions.offerTags = await OfferTag.find({_id:{$in:offerTagsIds}}).select("_id name")
+
+
+
+const storesIds= await Product.distinct("store", {
+  subcategoryType,
+});
+filterOptions.stores = await Store.find({_id:{$in:storesIds}}).select("_id name")
+
+
+const priceRangeResult = await Product.aggregate([
+  {
+    $match: {
+      subcategoryType,
+    },
+  },
+  { $unwind: "$variant" },
+  {
+    $group: {
+      _id: null,
+      minPrice: { $min: "$variant.price" },
+      maxPrice: { $max: "$variant.price" },
+    },
+  },
+  { $project: { _id: 0, minPrice: 1, maxPrice: 1 } },
+]);
+
+filterOptions.priceRange = priceRangeResult[0] || { minPrice: 0, maxPrice: 0 };
+
+
+
+  res.status(200).json({ status: "success", data: filterOptions });
+});
 
 
 // exports.updateProductVariant = asyncHandler(async (req, res, next) => {

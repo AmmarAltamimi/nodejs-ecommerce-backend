@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Coupon = require("./countryModel")
 const Product = require("./productModel")
 const ShippingRate = require("./shippingRateModel")
+const cloudinary = require("../utils/cloudinary");
 
 const storeScheme = new mongoose.Schema(
   {
@@ -120,6 +121,19 @@ storeScheme.pre(["findOneAndDelete", "deleteMany"], async function (next) {
   
 
   if (stores.length > 0) {
+        // delete imageCover and images for the stores from cloudinary
+        await Promise.all(
+          stores.map(async(store)=>{
+            await cloudinary.uploader.destroy(store.imageCover.public_id);
+            store.images.map(async(image)=>{
+              await cloudinary.uploader.destroy(image.public_id);
+
+            })
+      
+          })
+        )
+    
+
     const storeIds = stores.map((p) => p._id);
     await Coupon.deleteMany({ store: { $in: storeIds } });
     await Product.deleteMany({ store: { $in: storeIds } });

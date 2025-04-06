@@ -27,7 +27,9 @@ const {
   setSlugArray,
   ensureUniqueSubModelValueMultiObject,
   ensureNoFreeShippingForAll,
-  ensureSubDocumentExistsById
+  ensureSubDocumentExistsById,
+  validateUserOwnership,
+  validateReferenceOwnership
 } = require("./customValidator");
 
 const createProductValidator = [
@@ -139,7 +141,7 @@ const createProductValidator = [
     .withMessage("store required")
     .isMongoId()
     .withMessage("Invalid store id format")
-    .custom((val, { req }) => ensureDocumentExistsById(val, req, Store)),
+    .custom((val, { req }) => validateUserOwnership(val, req, Store)),
 ];
 
 // Validation for Men
@@ -540,7 +542,10 @@ const createLaptopValidation = [
 ];
 
 const updatedProductValidator = [
-  check("id").isMongoId().withMessage("Invalid Product id format"),
+  check("id").isMongoId().withMessage("Invalid Product id format")
+    .custom(async (id, { req }) =>
+      validateReferenceOwnership(id, req, Product,"store")
+    ),
   check("subcategoryType")
   .notEmpty()
   .withMessage("subcategoryType required")
@@ -640,7 +645,7 @@ const updatedProductValidator = [
     .optional()
     .isMongoId()
     .withMessage("Invalid store id format")
-    .custom((val, { req }) => ensureDocumentExistsById(val, req, Store)),
+    .custom((val, { req }) => validateUserOwnership(val, req, Store)),
 ];
 
 
@@ -999,7 +1004,10 @@ const updateLaptopValidation = [
 ];
 
 exports.deleteProductValidator = [
-  check("id").isMongoId().withMessage("Invalid product id format"),
+  check("id").isMongoId().withMessage("Invalid product id format")
+  .custom(async (id, { req }) =>
+    validateReferenceOwnership(id, req, Product,"store")
+  ),
   validatorMiddleware,
 ];
 
@@ -1007,6 +1015,14 @@ exports.getProductValidator = [
   check("id").isMongoId().withMessage("Invalid product id format"),
   check("variantId").isMongoId().withMessage("Invalid variant id format")
   .custom((val, { req }) => ensureSubDocumentExistsById(val, req, Product, {_id: req.params.id},"variant")),
+  validatorMiddleware,
+];
+
+exports.getFilterOptionsValidator = [
+  check("subcategoryType")
+  .notEmpty()
+  .withMessage("subcategoryType required")
+  .custom((val, { req }) => validateTypeDiscriminator(val, req)),
   validatorMiddleware,
 ];
 

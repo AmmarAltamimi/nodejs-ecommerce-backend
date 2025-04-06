@@ -29,16 +29,22 @@ const {
 } = require("../middlewares/uploadImageMiddleware");
 
 
-router
-  .route("/")
-  .get(
-    protect,
-    allowedTo("admin"),
-    validatorProductId, // validate product id in params
-    createFilterObj, // get list of Reviews for specific product
-    getReviews
-  )
-  .post(
+
+
+
+// i use virtual to get reviews that belongs to its product so i dont need to make its router 
+// also there is in my dashboard need to get reviews belongs to specific user or specific product
+
+  // .route("/")
+  // .get(
+  //   protect,
+  //   allowedTo("admin"),
+  //   validatorProductId, // validate product id in params
+  //   createFilterObj, // get list of Reviews for specific product
+  //   getReviews
+  // )
+  
+  router.route("/").post(
     protect,
     allowedTo("user"),
     uploadReviewImage,

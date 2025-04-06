@@ -34,13 +34,6 @@ async function updateWishlistWithLatest(wishlist) {
 
         // 3. check the reset of keys that are related to the ref 
 
-        console.log( wishlistObj.snapshot.productName);
-        console.log(product.title);
-        console.log( wishlistObj.snapshot.variantName);
-        console.log( variant.variantTitle);
-        console.log( variant.variantTitle);
-        console.log( wishlistObj.snapshot.price);
-        console.log(variant.price);
         
         // A. Product-related keys
         wishlistObj.snapshot.productName = product.title;

@@ -5,6 +5,7 @@ const Order = require("./paymentDetailsModel");
 const Store = require("./storeModel");
 const Review = require("./reviewModel");
 const Address = require("./addressModel");
+const cloudinary = require("../utils/cloudinary");
 
 const userSchema = new mongoose.Schema(
   {
@@ -104,6 +105,9 @@ userSchema.pre("findOneAndDelete", async function (next) {
   const user = await this.model.findOne(this.getQuery());
 
   if (user) {
+   // delete image for user from cloudinary
+    await cloudinary.uploader.destroy(user.profileImg.public_id);
+
     await Cart.deleteMany({ user: user._id });
     await Order.deleteMany({ user: user._id });
     await Review.deleteMany({ user: user._id });

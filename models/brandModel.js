@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Product = require("./productModel")
+const cloudinary = require("../utils/cloudinary");
 
 const brandSchema = new mongoose.Schema(
   {
@@ -43,6 +44,15 @@ brandSchema.pre(["findOneAndDelete", "deleteMany"], async function (next) {
   
 
   if (brands.length > 0) {
+    // delete Image for the brands from cloudinary
+    await Promise.all(
+      brands.map(async(brand)=>{
+        await cloudinary.uploader.destroy(brand.image.public_id);
+  
+      })
+    )
+    
+
     const brandIds = brands.map((p) => p._id);
     await Product.deleteMany({ brand: { $in: brandIds } }); ;
 

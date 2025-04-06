@@ -91,8 +91,9 @@ const getNewTotalPriceAfterCouponDiscount = (coupon,cart) => {
   // get store for this coupon to apply coupon in cartItemObj that have same store  
   const {store} = coupon;
   // get cartItemObj that have only store id coupon
+
   const storeItems = cart.cartItem.filter(
-    (item) => item.store.toString() === store.toString()
+    (item) => item.store._id.toString() === store._id.toString()
   );
 
   if (storeItems.length === 0) {
@@ -114,7 +115,7 @@ const getNewTotalPriceAfterCouponDiscount = (coupon,cart) => {
   // get Total price by abstract the discountedAmount from total price
   const newTotal = cart.total - discountedAmount;
 
-  return newTotal;
+  return {newTotal,discountedAmount} ;
 } 
 
 
@@ -282,7 +283,7 @@ async function updateCartWithLatestForCheckout(cart)  {
         return
       }
   
-      const newTotal = getNewTotalPriceAfterCouponDiscount(coupon,cart)
+      const {newTotal,discountedAmount} = getNewTotalPriceAfterCouponDiscount(coupon,cart)
       cart.total = newTotal;
     
     }
@@ -541,7 +542,7 @@ const applyCoupon = asyncHandler(async (req, res, next) => {
     name: req.body.name,
     start: { $lt: Date.now() },
     expire: { $gt: Date.now() },
-  });
+  }).populate("store");
   if (!coupon) {
     return next(new ApiError("Coupon not found or expired", 404));
   }
@@ -553,7 +554,7 @@ const applyCoupon = asyncHandler(async (req, res, next) => {
 
 
 // get NewTotalPrice After CouponDiscount
-  const newTotal = getNewTotalPriceAfterCouponDiscount(coupon,cart)
+  const {newTotal,discountedAmount} = getNewTotalPriceAfterCouponDiscount(coupon,cart)
   cart.total = newTotal
 
   
@@ -564,7 +565,7 @@ const applyCoupon = asyncHandler(async (req, res, next) => {
   const updateCart = await cart.save();
 
   res.status(200).json({
-    status: "success",
+    message: `Coupon applied successfully. Discount: -$${discountedAmount.toFixed(2)} applied to items from ${coupon.store.name}.`,
     numOfCartItems: updateCart.cartItem.length,
     data: updateCart,
   });

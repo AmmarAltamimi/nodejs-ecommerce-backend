@@ -2,8 +2,10 @@ const { check } = require("express-validator");
 const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Cart = require("../../models/cartModel");
 const Store = require("../../models/storeModel");
+const Order = require("../../models/orderModel");
+const GroupOrder = require("../../models/groupOrderModel");
 const Address = require("../../models/addressModel");
-const { ensureDocumentExistsById,validateUserOwnership } = require("./customValidator");
+const { ensureDocumentExistsById,validateUserOwnership, validateReferenceOwnership } = require("./customValidator");
 
 exports.createOrderValidator = [
   check("cart")
@@ -30,17 +32,35 @@ exports.storeGroupValidator = [
 ];
 
 exports.orderValidator = [
-  check("id").isMongoId().withMessage("Invalid order id format"),
+  check("id").isMongoId().withMessage("Invalid order id format")
+    .custom(async (orderId, { req }) =>
+          validateUserOwnership(orderId, req, Order)
+        )
+        .custom(async (orderId, { req }) =>
+          validateReferenceOwnership(orderId, req, Order,"shippingAddress")
+        ),
   validatorMiddleware,
 ];
 
 exports.updateGroupOrderValidator = [
-  check("groupId").isMongoId().withMessage("Invalid group id format"),
+  check("groupId").isMongoId().withMessage("Invalid group id format")
+  .custom(async (groupId, { req }) =>
+    validateReferenceOwnership(groupId, req, GroupOrder,"order")
+  )
+  .custom(async (groupId, { req }) =>
+    validateReferenceOwnership(groupId, req, GroupOrder,"store")
+  ),
   validatorMiddleware,
 ];
 
 exports.updateItemOrderValidator = [
-  check("groupId").isMongoId().withMessage("Invalid group id format"),
+  check("groupId").isMongoId().withMessage("Invalid group id format")
+  .custom(async (groupId, { req }) =>
+    validateReferenceOwnership(groupId, req, GroupOrder,"order")
+  )
+  .custom(async (groupId, { req }) =>
+    validateReferenceOwnership(groupId, req, GroupOrder,"store")
+  ),
   check("itemId").isMongoId().withMessage("Invalid item id format"),
   validatorMiddleware,
 ];

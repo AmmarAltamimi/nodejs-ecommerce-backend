@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Brand = require("./brandModel")
 const Product = require("./productModel")
 const SubCategoryFilter = require("./subCategoryFilterModel")
+const cloudinary = require("../utils/cloudinary");
 
 const subCategorySchema = new mongoose.Schema(
   {
@@ -38,6 +39,15 @@ subCategorySchema.pre(["findOneAndDelete", "deleteMany"], async function (next) 
   const subCategories = await this.model.find(this.getFilter()); 
 
   if (subCategories.length > 0) {
+    // delete Image for the subCategories from cloudinary
+    await Promise.all(
+      subCategories.map(async(subCategory)=>{
+        await cloudinary.uploader.destroy(subCategory.image.public_id);
+  
+      })
+    )
+    
+
     const subCategoryIds = subCategories.map((p) => p._id);
     await Brand.updateMany(
       { subCategories: { $in: subCategoryIds } }, 

@@ -27,7 +27,7 @@ const {
   getUserValidator,
   updateLoggedUserDataValidator,
   updateLoggedUserPasswordValidator,
-} = require("../utils/validators/userValidator  ");
+} = require("../utils/validators/userValidator");
 const {
   userDefaultImage,
   validateActualTypeAndCleanFileSingleImage,

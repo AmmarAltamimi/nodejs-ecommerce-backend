@@ -129,6 +129,7 @@ exports.updateToDefaultAddressValidator = [
   check("addressId")
     .isMongoId()
     .withMessage("Invalid address id format")
+    .custom(async (val, { req }) =>  validateUserOwnership(val, req, Address))
     .custom(async (val, { req }) =>  ensureUniqueDefaultUser(val, req, Address)),
   validatorMiddleware,
 ];
