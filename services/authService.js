@@ -1,7 +1,5 @@
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
-const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
 const { createToken } = require("../utils/createToken");
@@ -12,40 +10,9 @@ const { userRes } = require("../utils/userResponse");
 const {
   uploadSingleImage,
 } = require("../middlewares/uploadImageMiddleware");
-const cloudinary = require("../utils/cloudinary");
 
 exports.uploadUserImage = uploadSingleImage("users", "profileImg");
 
-exports.uploadUserImageToCloudinary = async (req, res, next) => {
-  // if updated  key not image so no req.file will be founded
-  if (!req.file) {
-    return next();
-  }
-  try {
-    const customFileName = `user-${uuidv4()}-${Date.now()}`; // You can create your own naming scheme
-
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "users", // Optional: specify folder in Cloudinary
-      public_id: customFileName, // Set the custom name for the image
-      quality: "auto", // Optional: set quality
-      width: 600, // Optional: resize image width
-      height: 600, // Optional: resize image height
-      crop: "fill", // Optional: crop the image
-    });
-
-    req.body.profileImg = {
-      url: result.secure_url,
-      public_id: result.public_id,
-    };
-
-    next();
-  } catch (err) {
-    fs.unlinkSync(req.file.path); // Remove local file after successful upload
-    return next(
-      new ApiError(`Failed to upload  to cloudinary ${err.message}`, 500)
-    );
-  }
-};
 
 // @desc    Signup
 // @route   GET /api/v1/auth/signup

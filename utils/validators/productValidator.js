@@ -13,23 +13,25 @@ const Store = require("../../models/storeModel");
 const {
   setSlug,
   ensureDocumentExistsById,
+  ensureDocumentExistsByIdAndValid,
   ensureAllDocumentsExistByIds,
   ensureAllDocumentsBelongToParent,
-  checkMaxImages,
+  specificAnyImagesRequired,
   validateTypeDiscriminator,
-  checkDiscountValue,
   ensureSingleDefaultVariant,
   ensureDocumentBelongToParent,
   ensureDocumentBelongToAllParent,
   isPriceLessThanOriginalPrice,
-  isSaleExists,
-  checkIfIsSaleExit,
+  isOfferTagExists,
   setSlugArray,
-  ensureUniqueSubModelValueMultiObject,
+  ensureUniqueSubModelValue,
+  ensureUniqueValueInSendArrayOfObj,
   ensureNoFreeShippingForAll,
-  ensureSubDocumentExistsById,
+  isPriceLessThanOfferTagFixedDiscountIfExists,
+  ensureSubDocumentExistsBySlug,
   validateUserOwnership,
-  validateReferenceOwnership
+  validateReferenceOwnership,
+  checkSizeType
 } = require("./customValidator");
 
 const createProductValidator = [
@@ -83,12 +85,10 @@ const createProductValidator = [
     .withMessage("Invalid category id format")
     .custom((val, { req }) => ensureDocumentExistsById(val, req, Category)),
   check("offerTag")
-  .notEmpty()
-  .withMessage("offerTag required")
-  .isArray()
-  .withMessage("offerTag is array")
-  .custom((offerTagReceived, { req }) =>
-  ensureAllDocumentsExistByIds(offerTagReceived, req, OfferTag)),
+  .optional()
+  .isMongoId()
+  .withMessage("Invalid offerTag id format")
+  .custom((val, { req }) => ensureDocumentExistsByIdAndValid(val, req, OfferTag,"saleStartDate","saleEndDate")),
   check("subCategories")
     .notEmpty()
     .withMessage("subcategories required")
@@ -156,6 +156,14 @@ const createMenValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
     .notEmpty()
@@ -176,12 +184,19 @@ const createMenValidation = [
     .notEmpty()
     .withMessage("enter variant sku")
     .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "sku"
+      )
+    )
+    .custom((val, { req }) =>
+      ensureUniqueSubModelValue(
         val,
         req,
         Product,
         false,
-        {},
         "variant",
         "sku"
       )
@@ -190,33 +205,19 @@ const createMenValidation = [
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
     .notEmpty()
-    .withMessage("price required"),
+    .withMessage("price required")
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
-
+    .custom((value, { req }) => isOfferTagExists(value, req)),
   check("variant.*.weight")
-    .isInt()
-    .withMessage("weight must be number")
+  .isFloat()
+  .withMessage("weight must be number")
     .notEmpty()
     .withMessage("weight is required"),
 
@@ -225,8 +226,12 @@ const createMenValidation = [
     .withMessage("phone Quantity must be at least 1")
     .notEmpty()
     .withMessage("phone Quantity is required"),
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
   check("variant.*.imageCover").custom((val, { req }) =>
-    checkMaxImages(val, req)
+    specificAnyImagesRequired(val, req,"imageCover")
   ),
   check("variant.*.color").notEmpty().withMessage("men Color is required"),
 
@@ -234,7 +239,8 @@ const createMenValidation = [
     .notEmpty()
     .withMessage("men material is required"),
 
-  check("variant.*.size").notEmpty().withMessage("men Size is required"),
+  check("variant.*.size").notEmpty().withMessage("men Size is required")
+  .custom((val, { req}) => checkSizeType(val, req)),
 ];
 
 // Validation for Women
@@ -249,6 +255,14 @@ const createWomenValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
     .notEmpty()
@@ -269,12 +283,19 @@ const createWomenValidation = [
     .notEmpty()
     .withMessage("enter variant sku")
     .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "sku"
+      )
+    )
+    .custom((val, { req }) =>
+      ensureUniqueSubModelValue(
         val,
         req,
         Product,
         false,
-        {},
         "variant",
         "sku"
       )
@@ -283,33 +304,19 @@ const createWomenValidation = [
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
     .notEmpty()
-    .withMessage("price required"),
+    .withMessage("price required")
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
-
+    .custom((value, { req }) => isOfferTagExists(value, req)),
   check("variant.*.weight")
-    .isInt()
-    .withMessage("weight must be number")
+  .isFloat()
+  .withMessage("weight must be number")
     .notEmpty()
     .withMessage("weight is required"),
 
@@ -318,9 +325,13 @@ const createWomenValidation = [
     .withMessage("phone Quantity must be at least 1")
     .notEmpty()
     .withMessage("phone Quantity is required"),
-  check("variant.*.imageCover").custom((val, { req }) =>
-    checkMaxImages(val, req)
-  ),
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
+    check("variant.*.imageCover").custom((val, { req }) =>
+      specificAnyImagesRequired(val, req,"imageCover")
+    ),
 
   check("variant.*.color").notEmpty().withMessage("women Color is required"),
 
@@ -343,6 +354,14 @@ const createPhoneValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
     .notEmpty()
@@ -363,12 +382,19 @@ const createPhoneValidation = [
     .notEmpty()
     .withMessage("enter variant sku")
     .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "sku"
+      )
+    )
+    .custom((val, { req }) =>
+      ensureUniqueSubModelValue(
         val,
         req,
         Product,
         false,
-        {},
         "variant",
         "sku"
       )
@@ -377,32 +403,19 @@ const createPhoneValidation = [
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
     .notEmpty()
-    .withMessage("price required"),
+    .withMessage("price required")
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
+    .custom((value, { req }) => isOfferTagExists(value, req)),
 
   check("variant.*.weight")
-    .isInt()
+    .isFloat()
     .withMessage("weight must be number")
     .notEmpty()
     .withMessage("weight is required"),
@@ -412,9 +425,13 @@ const createPhoneValidation = [
     .withMessage("phone Quantity must be at least 1")
     .notEmpty()
     .withMessage("phone Quantity is required"),
-  check("variant.*.imageCover").custom((val, { req }) =>
-    checkMaxImages(val, req)
-  ),
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
+    check("variant.*.imageCover").custom((val, { req ,path}) =>
+      specificAnyImagesRequired(val, req,path,"imageCover")
+    ),
 
   check("variant.*.color").notEmpty().withMessage("enter Phone color"),
   check("variant.*.storageCapacity")
@@ -447,6 +464,14 @@ const createLaptopValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
     .notEmpty()
@@ -467,12 +492,19 @@ const createLaptopValidation = [
     .notEmpty()
     .withMessage("enter variant sku")
     .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "sku"
+      )
+    )
+    .custom((val, { req }) =>
+      ensureUniqueSubModelValue(
         val,
         req,
         Product,
         false,
-        {},
         "variant",
         "sku"
       )
@@ -481,33 +513,19 @@ const createLaptopValidation = [
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
     .notEmpty()
-    .withMessage("price required"),
+    .withMessage("price required")
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
-
+    .custom((value, { req }) => isOfferTagExists(value, req)),
   check("variant.*.weight")
-    .isInt()
-    .withMessage("weight must be number")
+  .isFloat()
+  .withMessage("weight must be number")
     .notEmpty()
     .withMessage("weight is required"),
 
@@ -516,9 +534,13 @@ const createLaptopValidation = [
     .withMessage("phone Quantity must be at least 1")
     .notEmpty()
     .withMessage("phone Quantity is required"),
-  check("variant.*.imageCover").custom((val, { req }) =>
-    checkMaxImages(val, req)
-  ),
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
+    check("variant.*.imageCover").custom((val, { req }) =>
+      specificAnyImagesRequired(val, req,"imageCover")
+    ),
   check("variant.*.color").notEmpty().withMessage("enter Laptop color  "),
   check("variant.*.ramSize").notEmpty().withMessage("enter Laptop ramSize "),
   check("variant.*.processorBrand")
@@ -556,6 +578,7 @@ const updatedProductValidator = [
     .withMessage("too short product title")
     .isLength({ max: 32 })
     .withMessage("too long product title")
+    
     .custom((val, { req }) => setSlug(val, req, Product)),
   check("description")
     .optional()
@@ -660,6 +683,14 @@ const updateMenValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
   .optional()
@@ -678,12 +709,19 @@ const updateMenValidation = [
   check("variant.*.sku")
     .optional()
     .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "sku"
+      )
+    )
+    .custom((val, { req }) =>
+      ensureUniqueSubModelValue(
         val,
         req,
         Product,
         false,
-        {},
         "variant",
         "sku"
       )
@@ -691,29 +729,16 @@ const updateMenValidation = [
   check("variant.*.price")
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
-    .optional(),
+    .optional()
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
+    .custom((value, { req }) => isOfferTagExists(value, req)),
 
   check("variant.*.weight")
     .isInt()
@@ -721,6 +746,10 @@ const updateMenValidation = [
     .withMessage("weight is required"),
 
   check("variant.*.stockQuantity")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
+    check("variant.*.ReservedStock")
     .isInt({ min: 1 })
     .withMessage("phone Quantity must be at least 1")
     .optional(),
@@ -746,6 +775,14 @@ const updateWomenValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
   .optional()
@@ -763,43 +800,37 @@ const updateWomenValidation = [
     .withMessage("keywords is array"),
   check("variant.*.sku")
   .optional()
-    .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
-        val,
-        req,
-        Product,
-        false,
-        {},
-        "variant",
-        "sku"
-      )
-    ),
+  .custom((val, { req }) =>
+    ensureUniqueValueInSendArrayOfObj(
+      val,
+      req,
+      "variant",
+      "sku"
+    )
+  )
+  .custom((val, { req }) =>
+    ensureUniqueSubModelValue(
+      val,
+      req,
+      Product,
+      false,
+      "variant",
+      "sku"
+    )
+  ),
   check("variant.*.price")
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
-    .optional(),
+    .optional()
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
+    .custom((value, { req }) => isOfferTagExists(value, req)),
 
   check("variant.*.weight")
     .isInt()
@@ -810,7 +841,10 @@ const updateWomenValidation = [
     .isInt({ min: 1 })
     .withMessage("phone Quantity must be at least 1")
     .optional(),
-
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
 
   check("variant.*.color").optional(),
 
@@ -833,6 +867,14 @@ const updatePhoneValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
   .optional()
@@ -850,43 +892,37 @@ const updatePhoneValidation = [
     .withMessage("keywords is array"),
   check("variant.*.sku")
   .optional()
-    .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
-        val,
-        req,
-        Product,
-        req.params.id,
-        {},
-        "variant",
-        "sku"
-      )
-    ),
+  .custom((val, { req }) =>
+    ensureUniqueValueInSendArrayOfObj(
+      val,
+      req,
+      "variant",
+      "sku"
+    )
+  )
+  .custom((val, { req }) =>
+    ensureUniqueSubModelValue(
+      val,
+      req,
+      Product,
+      false,
+      "variant",
+      "sku"
+    )
+  ),
   check("variant.*.price")
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
-    .optional(),
+    .optional()
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
+    .custom((value, { req }) => isOfferTagExists(value, req)),
 
   check("variant.*.weight")
     .isInt()
@@ -897,7 +933,10 @@ const updatePhoneValidation = [
     .isInt({ min: 1 })
     .withMessage("phone Quantity must be at least 1")
     .optional(),
-
+    check("variant.*.ReservedStock")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
   check("variant.*.color").optional(),
   check("variant.*.storageCapacity")
   .optional(),
@@ -922,6 +961,14 @@ const updateLaptopValidation = [
     .withMessage("too short variant title")
     .isLength({ max: 32 })
     .withMessage("too long variant title")
+    .custom((val, { req }) =>
+      ensureUniqueValueInSendArrayOfObj(
+        val,
+        req,
+        "variant",
+        "variantTitle"
+      )
+    )
     .custom((val, { req, path }) => setSlugArray(val, req, Product, path)),
   check("variant.*.variantDescription")
   .optional()
@@ -939,43 +986,37 @@ const updateLaptopValidation = [
     .withMessage("keywords is array"),
   check("variant.*.sku")
   .optional()
-    .custom((val, { req }) =>
-      ensureUniqueSubModelValueMultiObject(
-        val,
-        req,
-        Product,
-        false,
-        {},
-        "variant",
-        "sku"
-      )
-    ),
+  .custom((val, { req }) =>
+    ensureUniqueValueInSendArrayOfObj(
+      val,
+      req,
+      "variant",
+      "sku"
+    )
+  )
+  .custom((val, { req }) =>
+    ensureUniqueSubModelValue(
+      val,
+      req,
+      Product,
+      false,
+      "variant",
+      "sku"
+    )
+  ),
   check("variant.*.price")
     .isFloat({ min: 0 })
     .withMessage("price must be less than 20000")
-    .optional(),
+    .optional()
+    .custom((val, { req }) =>
+      isPriceLessThanOfferTagFixedDiscountIfExists(val,req, OfferTag)),
   check("variant.*.originalPrice")
     .optional()
     .isFloat({ min: 0 })
     .custom((val, { req, path }) =>
       isPriceLessThanOriginalPrice(val, req, path)
     )
-    .custom((value, { req, path }) => isSaleExists(value, req, path)),
-  check("variant.*.isSale")
-    .optional()
-    .custom((value, { req, path }) => checkIfIsSaleExit(value, req, path)),
-  check("variant.*.saleEndDate")
-    .optional()
-    .isDate({ format: "MM/DD/YYYY" })
-    .withMessage("saleEndDate is Date")
-    .isAfter(new Date().toISOString())
-    .withMessage("saleEndDate must be after the current date"),
-  check("variant.*.discountType").optional(),
-  check("variant.*.discountValue")
-    .optional()
-    .isFloat()
-    .withMessage("discount Value must number")
-    .custom((val, { req, path }) => checkDiscountValue(val, req, path)),
+    .custom((value, { req }) => isOfferTagExists(value, req)),
 
   check("variant.*.weight")
     .isInt()
@@ -983,6 +1024,10 @@ const updateLaptopValidation = [
     .optional(),
 
   check("variant.*.stockQuantity")
+    .isInt({ min: 1 })
+    .withMessage("phone Quantity must be at least 1")
+    .optional(),
+    check("variant.*.ReservedStock")
     .isInt({ min: 1 })
     .withMessage("phone Quantity must be at least 1")
     .optional(),
@@ -1011,18 +1056,71 @@ exports.deleteProductValidator = [
   validatorMiddleware,
 ];
 
+exports.getRelatedProductValidator = [
+  check("slug").notEmpty().withMessage("slug is required"),
+  validatorMiddleware,
+];
 exports.getProductValidator = [
-  check("id").isMongoId().withMessage("Invalid product id format"),
-  check("variantId").isMongoId().withMessage("Invalid variant id format")
-  .custom((val, { req }) => ensureSubDocumentExistsById(val, req, Product, {_id: req.params.id},"variant")),
+  check("slug").notEmpty().withMessage("slug is required"),
+  check("variantSlug").notEmpty().withMessage("slug is variantSlug")
+  .custom((val, { req }) => ensureSubDocumentExistsBySlug(val, req, Product, {slug: req.params.slug},"variant")),
   validatorMiddleware,
 ];
 
-exports.getFilterOptionsValidator = [
+exports.getProductFilterOptionsValidator = [
   check("subcategoryType")
   .notEmpty()
   .withMessage("subcategoryType required")
   .custom((val, { req }) => validateTypeDiscriminator(val, req)),
+  validatorMiddleware,
+];
+exports.getStoreFilterOptionsValidator = [
+  check("subcategoryType")
+  .optional()
+  .custom((val, { req }) => validateTypeDiscriminator(val, req)),
+  check("storeId")
+  .notEmpty()
+  .withMessage("storeId required")
+  .isMongoId().withMessage("Invalid store id format"),
+  validatorMiddleware,
+];
+
+exports.getOfferTagFilterOptionsValidator = [
+  check("subcategoryType")
+  .optional()
+  .custom((val, { req }) => validateTypeDiscriminator(val, req)),
+  check("offerTagId")
+  .notEmpty()
+  .withMessage("offerTagId required")
+  .isMongoId().withMessage("Invalid offerTagId format"),
+  validatorMiddleware,
+];
+
+
+exports.getBrandFilterOptionsValidator = [
+  check("subcategoryType")
+  .optional()
+  .custom((val, { req }) => validateTypeDiscriminator(val, req)),
+  check("brandId")
+  .notEmpty()
+  .withMessage("brandId required")
+  .isMongoId().withMessage("Invalid brandId id format"),
+  validatorMiddleware,
+];
+
+
+exports.addOfferTagForSelectedProductValidations = [
+  check("productsIds")
+  .notEmpty()
+  .withMessage("productsIds required")
+  .isArray()
+  .withMessage("productsIds is array"),
+  check("productsIds.*")
+  .isMongoId().withMessage("Invalid product id format")
+  .custom(async (id, { req }) =>
+    validateReferenceOwnership(id, req, Product,"store")),
+  check("offerTagId")
+  .isMongoId().withMessage("Invalid offerTagId id format"),
   validatorMiddleware,
 ];
 
@@ -1083,26 +1181,3 @@ exports.applyUpdateValidations = async (req, res, next) => {
   await Promise.all(validations.map((validation) => validation.run(req)));
   validatorMiddleware(req, res, next);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // common update vatiant validator
-
-// const commonUpdateVariantValidator = [
-//   check("id").isMongoId().withMessage("Invalid product id format"),
-//   check("variantId").isMongoId().withMessage("Invalid product id format"),
-//   check("subcategoryType")
-//     .notEmpty()
-//     .withMessage("subcategoryType required")
-//     .custom((val, { req }) => validateTypeDiscriminator(val, req)),
-// ];

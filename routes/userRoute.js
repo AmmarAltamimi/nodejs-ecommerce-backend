@@ -16,7 +16,6 @@ const {
   activateUser,
   deactivateLoggedUser,
   uploadUserImage,
-  uploadUserImageToCloudinary,
 } = require("../services/userService");
 
 const {
@@ -30,7 +29,7 @@ const {
 } = require("../utils/validators/userValidator");
 const {
   userDefaultImage,
-  validateActualTypeAndCleanFileSingleImage,
+  validateSingleFileTypeDisk,uploadSingleImageToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 
 const { protect } = require("../middlewares/protectMiddleware");
@@ -47,8 +46,8 @@ router.put(
   allowedTo("user"),
   uploadUserImage,
   updateLoggedUserDataValidator,
-  validateActualTypeAndCleanFileSingleImage,
-  uploadUserImageToCloudinary,
+ validateSingleFileTypeDisk,
+  uploadSingleImageToCloudinaryDisk("profile","auto",600,600,"fill"),
   updateLoggedUserData
 );
 router.put(
@@ -77,8 +76,8 @@ router
     uploadUserImage,
     userDefaultImage,
     createUserValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadUserImageToCloudinary,
+  validateSingleFileTypeDisk,
+     uploadSingleImageToCloudinaryDisk("profile","auto",600,600,"fill"),
     createUser
   );
 router
@@ -89,8 +88,8 @@ router
     allowedTo("admin"),
     uploadUserImage,
     updateUserValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadUserImageToCloudinary,
+    validateSingleFileTypeDisk,
+       uploadSingleImageToCloudinaryDisk("profile","auto",600,600,"fill"),
     updateUser
   )
   .delete(

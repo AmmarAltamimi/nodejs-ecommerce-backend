@@ -42,6 +42,18 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+
+
+
+
+
+
+
+
+
+
+
 // Static method to calculate average ratings and quantity
 reviewSchema.statics.calcAverageRatingsAndQuantity = async function (productId) {
   // make the operations for calcAverageRatingsAndQuantity
@@ -67,9 +79,7 @@ reviewSchema.statics.calcAverageRatingsAndQuantity = async function (productId) 
 
   // save ratingsQuantity , avgRating to product Model
   if (reviewResultForSpecificProduct.length > 0) {
-    console.log(Product);
-    console.log(Product.modelName);
-    
+
     product = await Product.findByIdAndUpdate(productId, {
       ratingAverage: reviewResultForSpecificProduct[0].avgRating,
       ratingQuality: reviewResultForSpecificProduct[0].ratingsQuantity,
@@ -77,8 +87,7 @@ reviewSchema.statics.calcAverageRatingsAndQuantity = async function (productId) 
   }
   // if there is no review belongs to this product then ratingAverage and ratingQuality is Zero
   else {
-    console.log(Product);
-    console.log(Product.modelName);
+
     product = await Product.findByIdAndUpdate(productId, {
       ratingAverage: 0,
       ratingQuality: 0,

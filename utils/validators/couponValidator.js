@@ -2,7 +2,7 @@ const { check } = require("express-validator");
 const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
 const Coupon = require("../../models/couponModel");
 const Store = require("../../models/storeModel");
-const { ensureUniqueModelValue,validateUserOwnership,ensureDocumentExistsById,validateReferenceOwnership,ensureStartDateLessThanExpireDate } = require("./customValidator");
+const { ensureUniqueModelValue,validateUserOwnership,validateReferenceOwnership,ensureStartDateLessThanExpireDate } = require("./customValidator");
 
 exports.createCouponValidator = [
   check("name")
@@ -16,9 +16,7 @@ exports.createCouponValidator = [
     check("start")
     .isDate({ format: "MM/DD/YYYY" })
     .withMessage("start date is Date")
-    .isBefore(new Date().toISOString())
-    .withMessage("start date must be before the current date")
-    .custom((val, { req }) => ensureStartDateLessThanExpireDate(val, req))
+    .custom((val, { req }) => ensureStartDateLessThanExpireDate(val, req,"expire"))
     .notEmpty()
     .withMessage("start date required"),
   check("expire")
@@ -59,7 +57,7 @@ exports.updateCouponValidator = [
     check("start")
     .isDate({ format: "MM/DD/YYYY" })
     .withMessage("start date is Date")
-    .custom((val, { req }) => ensureStartDateLessThanExpireDate(val, req))
+    .custom((val, { req }) => ensureStartDateLessThanExpireDate(val, req,"expire"))
     .optional(),
   check("expire")
     .isDate({ format: "MM/DD/YYYY" })
@@ -91,5 +89,13 @@ exports.deleteCouponValidator = [
 
 exports.getCouponValidator = [
   check("id").isMongoId().withMessage("Invalid coupon id format"),
+  validatorMiddleware,
+];
+
+exports.getStoreCouponsValidator = [
+  check("storeId").isMongoId().withMessage("Invalid store id format")
+  .custom(async (storeId, { req }) =>
+    validateUserOwnership(storeId, req, Store)
+  ),
   validatorMiddleware,
 ];

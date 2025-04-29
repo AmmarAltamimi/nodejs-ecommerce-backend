@@ -4,7 +4,7 @@ const Category = require("../../models/categoryModel");
 const {
   ensureUniqueModelValue,
   setSlug,
-  checkSingleImage,
+  singleImageRequired,
 } = require("./customValidator");
 
 exports.createCategoryValidator = [
@@ -18,7 +18,8 @@ exports.createCategoryValidator = [
     .withMessage("too long category name")
     .custom((val, { req }) => ensureUniqueModelValue(val, req,false, Category,{name:val}))
     .custom((val, { req }) => setSlug(val, req,Category)),
-  check("image").custom((val, { req }) => checkSingleImage(val, req)),
+  check("image")
+  .custom((val, { req }) => singleImageRequired(val, req)),
 
   validatorMiddleware,
 ];

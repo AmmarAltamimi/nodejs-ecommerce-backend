@@ -1,7 +1,11 @@
+
 const mongoose = require("mongoose");
 const { calculateVariantPricing } = require("../utils/calculateVariantPricing");
 const Review = require("./reviewModel");
 const cloudinary = require("../utils/cloudinary");
+
+
+
 
 const productSchema = new mongoose.Schema(
   {
@@ -53,6 +57,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    returns: {
+      type: Number,
+      default: 0,
+    },
     view: {
       type: Number,
       default: 0,
@@ -62,7 +70,6 @@ const productSchema = new mongoose.Schema(
       type: Number,
       min: [1, "Rating must be above or equal 1.0"],
       max: [5, "Rating must be below or equal 5.0"],
-
     },
     ratingQuality: {
       type: Number,
@@ -73,13 +80,14 @@ const productSchema = new mongoose.Schema(
       ref: "category",
       required: [true, "category required"],
     },
-    offerTag: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: "OfferTag",
-        required: [true, "offerTag required"],
-      },
-    ],
+    offerTag: {
+      type: mongoose.Schema.ObjectId,
+      ref: "OfferTag",
+    },
+    isSale: {
+      type: Boolean,
+      default: false,
+    },
     subCategories: [
       {
         type: mongoose.Schema.ObjectId,
@@ -110,7 +118,7 @@ const productSchema = new mongoose.Schema(
 productSchema.pre(/^find/, function (next) {
   this.populate({
     path: "category",
-    select: "name -_id",
+    select: "name ",
   });
   this.populate({
     path: "store",
@@ -132,14 +140,12 @@ productSchema.pre(["findOneAndDelete", "deleteMany"], async function (next) {
     // delete imageCover and images for the stores from cloudinary
     await Promise.all(
       products.map(async (product) => {
-        product.variant.map(async(variantObj)=>{
+        product.variant.map(async (variantObj) => {
           await cloudinary.uploader.destroy(variantObj.imageCover.public_id);
           variantObj.images.map(async (image) => {
             await cloudinary.uploader.destroy(image.public_id);
           });
-
-        })
-
+        });
       })
     );
 
@@ -150,14 +156,7 @@ productSchema.pre(["findOneAndDelete", "deleteMany"], async function (next) {
   next();
 });
 
-// productSchema.pre("deleteMany", async function (next) {
-//   const products = await this.model.find(this.getQuery());
-//   if (products.length > 0) {
-//     const productIds = products.map((product) => product._id);
-//     await Review.deleteMany({ product: { $in: productIds } });
-//   }
-//   next();
-// });
+
 
 const productModel = mongoose.model("Product", productSchema);
 
@@ -221,24 +220,9 @@ const phoneSchema = new mongoose.Schema({
         min: [0, "discount percentage cannot be negative"],
         max: [100, "discount percentage cannot exceed 100%"],
       },
-      isSale: {
-        type: Boolean,
-        default: false,
-      },
-      saleEndDate: {
-        type: Date,
-      },
-      discountType: {
-        type: String,
-        enum: ["fixed", "percentage"],
-      },
-      discountValue: {
-        type: Number,
-        min: [0, "discount value cannot be negative"],
-      },
       salePrice: {
         type: Number,
-        min: [0, "original price cannot be negative"],
+        min: [0, "salePrice cannot be negative"],
       },
       weight: {
         type: Number,
@@ -250,19 +234,30 @@ const phoneSchema = new mongoose.Schema({
         required: [true, "quantity required"],
         min: [0, "quantity cannot be negative"],
       },
+      ReservedStock:{
+        type: Number,
+        min: [0, "quantity cannot be negative"],
+        default:0
+      },
+      VariantSold: {
+        type: Number,
+        default: 0,
+      },
+      VariantReturns: {
+        type: Number,
+        default: 0,
+      },
       imageCover: {
-        url: { type: String, required: [true, "image URL required"] },
+        url: { type: String , required: [true, "image URL required"]},
         public_id: {
-          type: String,
-          required: [true, "image public ID required"],
+          type: String, required: [true, "image public ID required"],
         },
       },
       images: [
         {
-          url: { type: String, required: [true, "image URL required"] },
+          url: { type: String,  },
           public_id: {
             type: String,
-            required: [true, "image public ID required"],
           },
         },
       ],
@@ -297,9 +292,16 @@ const phoneSchema = new mongoose.Schema({
     },
   ],
 });
-phoneSchema.pre("save", function (next) {
+phoneSchema.pre("save", async function (next) {
+  //get offerTag if its exits
+  const OfferTag = mongoose.model("OfferTag");
+
+  const offerTag = await OfferTag.findById(this.offerTag);
+
   // Map over each variant to recalculate salePrice and discountPercentage
-  this.variant = this.variant.map(calculateVariantPricing);
+  this.variant = this.variant.map((variantObj) =>
+    calculateVariantPricing(variantObj, offerTag,this)
+  );
   next();
 });
 
@@ -363,22 +365,10 @@ const laptopSchema = new mongoose.Schema({
         min: [0, "discount percentage cannot be negative"],
         max: [100, "discount percentage cannot exceed 100%"],
       },
-      isSale: {
-        type: Boolean,
-        default: false,
-      },
-      saleEndDate: {
-        type: Date,
-      },
-      discountType: {
-        type: String,
-        enum: ["fixed", "percentage"],
-      },
-      discountValue: {
+      salePrice: {
         type: Number,
-        min: [0, "discount value cannot be negative"],
+        min: [0, "salePrice cannot be negative"],
       },
-
       weight: {
         type: Number,
         required: [true, "weight required"],
@@ -389,6 +379,19 @@ const laptopSchema = new mongoose.Schema({
         required: [true, "quantity required"],
         min: [0, "quantity cannot be negative"],
       },
+      ReservedStock:{
+        type: Number,
+        min: [0, "quantity cannot be negative"],
+        default:0
+      },
+      VariantSold: {
+        type: Number,
+        default: 0,
+      },
+      VariantReturns: {
+        type: Number,
+        default: 0,
+      },
       imageCover: {
         url: { type: String, required: [true, "image URL required"] },
         public_id: {
@@ -398,10 +401,10 @@ const laptopSchema = new mongoose.Schema({
       },
       images: [
         {
-          url: { type: String, required: [true, "image URL required"] },
+          url: { type: String, },
           public_id: {
             type: String,
-            required: [true, "image public ID required"],
+            
           },
         },
       ],
@@ -441,9 +444,16 @@ const laptopSchema = new mongoose.Schema({
   ],
 });
 
-laptopSchema.pre("save", function (next) {
+laptopSchema.pre("save", async function (next) {
+  //get offerTag if its exits
+  const OfferTag = mongoose.model("OfferTag");
+
+  const offerTag = await OfferTag.findById(this.offerTag);
+
   // Map over each variant to recalculate salePrice and discountPercentage
-  this.variant = this.variant.map(calculateVariantPricing);
+  this.variant = this.variant.map((variantObj) =>
+    calculateVariantPricing(variantObj, offerTag,this)
+  );
   next();
 });
 productModel.discriminator("laptop", laptopSchema);
@@ -506,20 +516,9 @@ const menSchema = new mongoose.Schema({
         min: [0, "discount percentage cannot be negative"],
         max: [100, "discount percentage cannot exceed 100%"],
       },
-      isSale: {
-        type: Boolean,
-        default: false,
-      },
-      saleEndDate: {
-        type: Date,
-      },
-      discountType: {
-        type: String,
-        enum: ["fixed", "percentage"],
-      },
-      discountValue: {
+      salePrice: {
         type: Number,
-        min: [0, "discount value cannot be negative"],
+        min: [0, "salePrice cannot be negative"],
       },
       weight: {
         type: Number,
@@ -531,6 +530,19 @@ const menSchema = new mongoose.Schema({
         required: [true, "quantity required"],
         min: [0, "quantity cannot be negative"],
       },
+      ReservedStock:{
+        type: Number,
+        min: [0, "quantity cannot be negative"],
+        default:0
+      },
+      VariantSold: {
+        type: Number,
+        default: 0,
+      },
+      VariantReturns: {
+        type: Number,
+        default: 0,
+      },
       imageCover: {
         url: { type: String, required: [true, "image URL required"] },
         public_id: {
@@ -540,10 +552,10 @@ const menSchema = new mongoose.Schema({
       },
       images: [
         {
-          url: { type: String, required: [true, "image URL required"] },
+          url: { type: String,},
           public_id: {
             type: String,
-            required: [true, "image public ID required"],
+           
           },
         },
       ],
@@ -562,9 +574,16 @@ const menSchema = new mongoose.Schema({
     },
   ],
 });
-menSchema.pre("save", function (next) {
+menSchema.pre("save", async function (next) {
+  //get offerTag if its exits
+  const OfferTag = mongoose.model("OfferTag");
+
+  const offerTag = await OfferTag.findById(this.offerTag);
+
   // Map over each variant to recalculate salePrice and discountPercentage
-  this.variant = this.variant.map(calculateVariantPricing);
+  this.variant = this.variant.map((variantObj) =>
+    calculateVariantPricing(variantObj, offerTag,this)
+  );
   next();
 });
 
@@ -628,20 +647,9 @@ const womenSchema = new mongoose.Schema({
         min: [0, "discount percentage cannot be negative"],
         max: [100, "discount percentage cannot exceed 100%"],
       },
-      isSale: {
-        type: Boolean,
-        default: false,
-      },
-      saleEndDate: {
-        type: Date,
-      },
-      discountType: {
-        type: String,
-        enum: ["fixed", "percentage"],
-      },
-      discountValue: {
+      salePrice: {
         type: Number,
-        min: [0, "discount value cannot be negative"],
+        min: [0, "salePrice cannot be negative"],
       },
       weight: {
         type: Number,
@@ -653,6 +661,19 @@ const womenSchema = new mongoose.Schema({
         required: [true, "quantity required"],
         min: [0, "quantity cannot be negative"],
       },
+      ReservedStock:{
+        type: Number,
+        min: [0, "quantity cannot be negative"],
+        default:0
+      },
+      VariantSold: {
+        type: Number,
+        default: 0,
+      },
+      VariantReturns: {
+        type: Number,
+        default: 0,
+      },
       imageCover: {
         url: { type: String, required: [true, "image URL required"] },
         public_id: {
@@ -662,10 +683,10 @@ const womenSchema = new mongoose.Schema({
       },
       images: [
         {
-          url: { type: String, required: [true, "image URL required"] },
+          url: { type: String },
           public_id: {
             type: String,
-            required: [true, "image public ID required"],
+          
           },
         },
       ],
@@ -684,9 +705,16 @@ const womenSchema = new mongoose.Schema({
     },
   ],
 });
-womenSchema.pre("save", function (next) {
+womenSchema.pre("save", async function (next) {
+  //get offerTag if its exits
+  const OfferTag = mongoose.model("OfferTag");
+
+  const offerTag = await OfferTag.findById(this.offerTag);
+
   // Map over each variant to recalculate salePrice and discountPercentage
-  this.variant = this.variant.map(calculateVariantPricing);
+  this.variant = this.variant.map((variantObj) =>
+    calculateVariantPricing(variantObj, offerTag,this)
+  );
   next();
 });
 

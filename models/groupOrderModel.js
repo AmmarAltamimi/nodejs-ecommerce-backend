@@ -17,6 +17,15 @@ const groupOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Coupon",
     },
+    // snapshot for coupon if ref deleted
+    snapshot: {
+      name: {
+        type: String,
+      },
+      discount: {
+        type: Number,
+      },
+    },
     OrderItem: [
       {
         product: {
@@ -75,15 +84,44 @@ const groupOrderSchema = new mongoose.Schema(
           default: "available",
         },
 
-        // item status 
-        productStatus:{
+        // item status
+        productStatus: {
           type: String,
-          enum: ["Pending", "Processing", "Shipped","Delivered","Canceled","Refunded","FailedDelivery","OnHold","Backordered","PartiallyShipped","ExchangeRequested","AwaitingPickup",],
+          enum: [
+            "Pending",
+            "Confirmed",
+            "Processing",
+            "OnHold",
+            "Backordered",
+            "Shipped",
+            "OutforDelivery",
+            "Delivered",
+            "AwaitingPickup",
+            "PartiallyShipped",
+            "Cancelled",
+            "Failed",
+            "Returned",
+            "Refunded",
+          ],
+    
+
           default: "Pending",
+        },
+        hasBeenShipped: {
+          type: Boolean,
+          default: false,
+        },
+        hasBeenReturned: {
+          type: Boolean,
+          default: false,
         },
         DeliveredAt: {
           type: Date,
         },
+        ReturnedAt : {
+          type: Date,
+        },
+        
       },
     ],
     groupShippingFees: {
@@ -116,16 +154,19 @@ const groupOrderSchema = new mongoose.Schema(
         "Pending",
         "Confirmed",
         "Processing",
+        "OnHold",
+        "Backordered",
         "Shipped",
         "OutforDelivery",
         "Delivered",
+        "AwaitingPickup",
+        "PartiallyShipped",
         "Cancelled",
         "Failed",
-        "Refunded",
         "Returned",
-        "PartiallyShipped",
-        "OnHold",
+        "Refunded",
       ],
+
       default: "Pending",
     },
     DeliveredAt: {
@@ -135,7 +176,17 @@ const groupOrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const groupOrderModel = mongoose.model("GroupOrder", groupOrderSchema);
+groupOrderSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: "order",
+  });
+  this.populate({
+    path: "store",
+  });
 
+  next();
+});
+
+const groupOrderModel = mongoose.model("GroupOrder", groupOrderSchema);
 
 module.exports = groupOrderModel;

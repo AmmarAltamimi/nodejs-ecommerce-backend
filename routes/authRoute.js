@@ -10,7 +10,6 @@ const {
   verifyPassResetCode,
   resetPassword,
   uploadUserImage,
-  uploadUserImageToCloudinary,
 } = require("../services/authService");
 const {
   signUpValidator,
@@ -21,7 +20,7 @@ const {
 } = require("../utils/validators/authValidation");
 const {
   userDefaultImage,
-  validateActualTypeAndCleanFileSingleImage,
+  validateSingleFileTypeDisk,uploadSingleImageToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 
 router.post(
@@ -29,8 +28,8 @@ router.post(
   uploadUserImage,
   userDefaultImage,
   signUpValidator,
-  validateActualTypeAndCleanFileSingleImage,
-  uploadUserImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("profile","auto",600,600,"fill"),
   signUp
 );
 

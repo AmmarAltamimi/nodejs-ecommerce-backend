@@ -17,7 +17,9 @@ const dotenv = require("dotenv");
 const path = require("path");
 const bodyParser = require("body-parser");
 dotenv.config({ path: "config.env" });
-
+require("./utils/nodeCorn/nodeCornOfferTag");
+require("./utils/nodeCorn/nodeCornBanner");
+require("./utils/nodeCorn/nodeCornOrder");
 const { dbConnection } = require("./config/database");
 const { globalError } = require(`./middlewares/errorMiddleware`);
 const ApiError = require(`./utils/apiError`);

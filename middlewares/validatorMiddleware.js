@@ -1,48 +1,40 @@
 const { validationResult } = require("express-validator");
 const fs = require("fs");
 
-   // Delete all uploaded images on error
- function DeleteUploadedFile(req,res,next){
+//  function DeleteUploadedFile(req,res,next){
 
-  if (req.file) fs.unlinkSync(req.file.path);
-
-  if(req.files){
-
-    if(req.files.imageCover ) fs.unlinkSync(req.files.imageCover[0].path) 
-    if(req.files.images){
-        req.files.images.forEach(image => fs.unlinkSync(image.path))  
-      } 
-
-      if(req.body.variant) {
-
-        req.body.variant.forEach((_,i) => {
-          if(req.files[`variant[${i}][imageCover]`]) fs.unlinkSync(req.files[`variant[${i}][imageCover]`][0].path)
-            if(req.files[`variant[${i}][images]`] ){
-              req.files[`variant[${i}][images]`].forEach(image => fs.unlinkSync(image.path)) 
-            } 
-  
-        })
-
-      }
- 
-    
-
-    }
+// delete all UploadedFile locally if there error in express validator
+function DeleteUploadedFile(req, res, next) {
+  // mean if using single multer
+  if (req.file) {
+    fs.unlinkSync(req.file.path);
+    return;
   }
 
- 
-
-
+  if (req.files) {
+    // mean if using array multer
+    if (Array.isArray(req.files)) {
+      req.files.forEach((file) => fs.unlinkSync(file.path));
+    }
+    //  mean if using fields multer
+    else {
+      // eslint-disable-next-line no-restricted-syntax, guard-for-in
+      for (const fieldName in req.files) {
+        const filesArray = req.files[fieldName];
+        filesArray.forEach((file) => fs.unlinkSync(file.path));
+      }
+    }
+  }
+}
 
 // Validation middleware to check request validation errors
 exports.validatorMiddleware = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-   // Delete all uploaded images on error
-    DeleteUploadedFile(req,res,next)
+    // Delete all uploaded images on error
+    DeleteUploadedFile(req, res, next);
 
     return res.status(400).json({ errors: errors.array() });
   }
   next();
 };
-

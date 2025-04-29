@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const CouponUsage = require("./couponUsageModel")
 
 const couponSchema = new mongoose.Schema(
   {
@@ -33,6 +34,18 @@ const couponSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+couponSchema.pre(["findOneAndDelete", "deleteMany"], async function (next) {
+  const coupons = await this.model.find(this.getQuery()); 
+  
+  if (coupons.length > 0) {
+    const couponsIds = coupons.map((p) => p._id);
+    await CouponUsage.deleteMany({ coupon: { $in: couponsIds } }); ;
+
+  }
+
+  next();
+});
 
 const couponModel = mongoose.model("Coupon", couponSchema);
 

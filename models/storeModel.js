@@ -68,8 +68,8 @@ const storeScheme = new mongoose.Schema(
     }],
 
     images:  [ {
-      url: {type:String},      
-      public_id:{type:String},  
+      url: {type:String,required:true},      
+      public_id:{type:String,required:true},  
     }],
     imageCover:  {
         url: {type:String,required:true},       // The image URL you will use in your app
@@ -148,7 +148,6 @@ storeScheme.pre("save", async function (next) {
   const User = mongoose.model("User");
 
   if (this.isNew) {
-    console.log(User.modelName);
     const user = await User.findById(this.user);
     if (!user) {
       return next(new Error('User not found'));

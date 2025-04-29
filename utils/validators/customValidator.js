@@ -75,7 +75,7 @@ exports.ensureUniqueModelValue = async (val, req, currentId, Model, query) => {
   return true;
 };
 
-exports.ensureUniqueSubModelValueSingleObject =  async (
+exports.ensureUniqueSubModelValueInItsModel =  async (
   val,
   req,
   Model,
@@ -84,13 +84,12 @@ exports.ensureUniqueSubModelValueSingleObject =  async (
   array,
   uniqueField
 ) => {
-  const document = await Model.find(query);
+// for example in userMode i have address array which is array of obj each obj have name 
+//  when i push new Obj to add to address array i need to make sure name in this new obj not there in any obj in address array
 
-  let existsDoc;
-  document.forEach((doc)=>{
-  existsDoc = doc[array].find((item)=>item[uniqueField] === val)
-  
-})
+  const document = await Model.findOne(query);
+
+  let existsDoc = document[array].find((subDoc)=> subDoc[uniqueField]  === val )
 
 
   if (currentId) {
@@ -110,36 +109,63 @@ exports.ensureUniqueSubModelValueSingleObject =  async (
 };
 
 
+exports.ensureUniqueValueInSendArrayOfObj =  async (
+  val,
+  req,
+  array,
+  uniqueField
+) => {
+// for example i send variant array that have variantObj i want make sure title in each variantObj is different from other
 
-exports.ensureUniqueSubModelValueMultiObject = async (
+let counter = 0
+
+  req.body[array].forEach((item)=>{
+  if(item[uniqueField] === val){
+    counter += 1
+  }
+})
+
+if (counter > 1) {
+  throw new Error(`same ${uniqueField}  exists more than one in ${array} `);
+}
+return true;
+
+};
+
+
+
+
+exports.ensureUniqueSubModelValue = async (
   val,
   req,
   Model,
   currentId,
-  query,
   array,
   uniqueField
 ) => {
-  const document = await Model.find(query);
-  let isExists;
-  let counter = 0
-  let productId;
-  
-    req.body[array].forEach((item)=>{
-    if(item[uniqueField] === val){
-      counter += 1
-    }
-  })
+  // for example sku
+  // when i enter sku i should check if its there in any product so we did this logic 
+  // some one will say if in same product we enter same sku in in two obj >> that will not happen because 
+  // i mast make custom ensure Unique sku in its Product
 
+  const document = await Model.find();
+
+  let isExists;
+  let productId ;
+  
   // eslint-disable-next-line no-plusplus
   for (let i = 0; i < document.length; i++) {
     isExists = document[i][array].find((item)=>item[uniqueField] === val)
+    // if he find i want to break loop because maybe he will reach to last product and will not found so isExists will be false
+    // so that i need to break if he found 
     if(isExists){
+      // i need to store productId for the update option below
       productId =  document[i]._id
       break;
     }
    
   }
+
   if (currentId) {
 
     // Update
@@ -149,12 +175,10 @@ exports.ensureUniqueSubModelValueMultiObject = async (
   } else {
     // Create scenario.
     // eslint-disable-next-line no-lonely-if
-    if (isExists ) {
+    if (isExists) {
       throw new Error(`${uniqueField} already exists`);
     }
-    if ( counter > 1 ) {
-      throw new Error(` you entered ${counter} ${uniqueField} with same value `);
-    }
+   
   }
   return true;
 };
@@ -165,6 +189,14 @@ exports.ensureDocumentExistsById = async (val, req, Model) => {
   const document = await Model.findById(val);
   if (!document) {
     throw new Error(`Invalid ${Model.modelName}  id `);
+  }
+  return true;
+};
+
+exports.ensureDocumentExistsByIdAndValid = async (val, req, Model,startDate,endDate) => {
+  const document = await Model.findOne({_id:val ,[startDate]:{$lt:Date.now()},[endDate]:{$gt:Date.now()}});
+  if (!document) {
+    throw new Error(`Invalid ${Model.modelName}  id  or expired`);
   }
   return true;
 };
@@ -193,12 +225,38 @@ exports.ensureSubDocumentExistsById = async (
     throw new Error(`Invalid ${Model.modelName}  id`);
   }
 
+ 
   
   const isSubDocumentExist = document[subModel].some(
     (a) => a._id.toString() === val
   );
   if (!isSubDocumentExist) {
-    throw new Error(` ${subModel} id ${val} does Not belongs to  ${Model.modelName} `);
+    throw new Error(` ${subModel} id  ${val} does Not belongs to  ${Model.modelName} `);
+  }
+
+  return true;
+};
+
+
+exports.ensureSubDocumentExistsBySlug = async (
+  val,
+  req,
+  Model,
+  query,
+  subModel
+) => {
+  const document = await Model.findOne(query);
+
+  if (!document) {
+    throw new Error(`Invalid ${Model.modelName}  slug`);
+  }
+
+  
+  const isSubDocumentExist = document[subModel].some(
+    (a) => a.variantSlug === val
+  );
+  if (!isSubDocumentExist) {
+    throw new Error(` ${subModel} slug  ${val} does Not belongs to  ${Model.modelName} `);
   }
 
   return true;
@@ -274,6 +332,20 @@ exports.ensureAllDocumentsBelongToParent = async (
   return true;
 };
 
+exports.isPriceLessThanOfferTagFixedDiscountIfExists =async (val, req,Model) => {
+if(req.body.offerTag){
+  const offerTag = await Model.findById(req.body.offerTag);
+  // i will not check if exits because there is only check for offer tag
+if(offerTag.discountType === "fixed" &&  val <= offerTag.discountValue){
+  throw new Error(
+    `offer tag discount ${offerTag.discountValue} is more than the product price ${val}`
+  );
+}
+}
+
+  return true;
+};
+
 exports.isPriceLessThanOriginalPrice = (val, req,path) => {
   const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
   const index = match ? parseInt(match[1], 10) : null;
@@ -302,15 +374,22 @@ exports.isTimeMinLessThanTimeMax = (val, req) => {
 };
 
 
+exports.checkSizeType = (val, req) => {
+ // size is num or includes to   ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+ const sizes =  ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+  if (isNaN(parseInt(val)) &&  !sizes.includes(val.toUpperCase()) ) {
+    throw new Error("size is num or includes to [ XS S M L XL XXL XXXL] ");
+  }
+
+  return true;
+};
 
 
-exports.isSaleExists = (val, req,path) => {
-  const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
-  const index = match ? parseInt(match[1], 10) : null;
-  const currentVariant = req.body.variant[index];
 
-  if (currentVariant.isSale === "true" || currentVariant.saleEndDate || currentVariant.discountType || currentVariant.discountValue ) {
-    throw new Error("You cannot use a temporary offer and a permanent price together");
+exports.isOfferTagExists = (val, req) => {
+
+  if (req.body.offerTag ) {
+    throw new Error("You cannot use a temporary offer tag and a permanent price together");
   }
 
  
@@ -369,7 +448,7 @@ exports.checkIfUserReviewedProduct = async (productId, req, Model) => {
   return true;
 };
 
-exports.validateUserOwnership = async (Id, req, Model,refName) => {
+exports.validateUserOwnership = async (Id, req, Model) => {
   let document = await Model.findById(Id);
 
   // check owner Ship for user key
@@ -377,17 +456,27 @@ exports.validateUserOwnership = async (Id, req, Model,refName) => {
   if (documentUserId !== req.user._id.toString()) {
     throw new Error(`You do not have permission to perform this action on ${Model.modelName}.`);
   }
+
+  return true
 };
 
 exports.validateReferenceOwnership  = async (Id, req, Model,refName) => {
-  let document = Model.findById(Id).populate(refName);
+  let document =await Model.findById(Id);
+ if(!document){
+  throw new Error(`${Model.modelName} not found.`);
+ }
+ // because if doc of ref deleted the ref value will ne null and i need only i check if value is there
+ // because if its ref delete i want to pass because i deal with this with snapchat (i write note in snapchat topic)
+if(document[refName]){
   // check owner ship for ref that has schema include user key
-    const documentUserSchema =  document[refName].user.toString()
+  const documentUserSchema =  document[refName].user.toString()
   if (documentUserSchema !== req.user._id.toString()) {
     throw new Error(`You do not have permission to perform this action on ${Model.modelName}.`);
-  
 
   }
+}
+  return true
+
 };
 
 exports.validateOwnership = async (Id, req, Model, idName) => {
@@ -401,32 +490,84 @@ exports.validateOwnership = async (Id, req, Model, idName) => {
   }
 };
 
-exports.checkSingleImage = (val, req) => {
+exports.singleImageRequired = (val, req) => {
   if (!req.file) {
     throw new Error("image is required");
   }
   return true;
 };
 
-exports.checkMaxImages = (val, req) => {
-  if (!req.files) {
-    throw new Error("images is required");
+exports.arrayImagesRequired = (val, req) => {
+  if (!req.files || req.files.length === 0) {
+    throw new Error("image is required");
   }
   return true;
 };
 
-exports.checkStoreImages = (val, req) => {
-  // i did Object.keys(req.files).length because !req.files not working
-  if (
-    Object.keys(req.files).length === 0 ||
-    !req.files.imageCover ||
-    !req.files.images
-  ) {
-    throw new Error("both imageCover and images are required");
+exports.allFieldsImagesRequired = (val, req,allFieldArrayRequired) => {
+  const allFieldArray = Object.keys(req.files)
+  if (allFieldArray.length === 0 || JSON.stringify(allFieldArray.sort()) !== JSON.stringify(allFieldArrayRequired.sort())) {
+    throw new Error("image is required");
   }
-
   return true;
 };
+
+exports.specificFieldsImagesRequired = (val, req,specificKey) => {
+  if (Object.keys(req.files).length === 0 || !req.files[specificKey] ) {
+    throw new Error("image is required");
+  }
+  return true;
+};
+
+exports.allAnyImagesRequired = (val, req,path,allAnyArrayRequired) => {
+  const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
+  const index = match ? parseInt(match[1], 10) : null;
+    // get obj of req.files that only belong to this index 
+  // mean if im inn index one i wil get obj that have key[0] only 
+  // because i need to check for each index so if for example imageCover , images required i need to check if its there in index 0 and index 1 ...
+  //if i dont do that then i you send imageCover  , images in index 0 and dont in 1 then will not give you error because its exits in index 0 
+  const filesBelongsToCurrentIndex = req.files.filter((file)=> file.fieldname.includes(index))
+  
+
+   // edit fieldname in req.files and get name of keys
+   const newReqFiles =filesBelongsToCurrentIndex.map((file)=> file.fieldname.split("[")[2].slice(0,-1))
+   // delete repeat
+   const allAnySet = new Set(newReqFiles);
+  const allAnyArray = [...allAnySet]
+
+  if (req.files.length === 0 ||  JSON.stringify(allAnyArray.sort()) !== JSON.stringify(allAnyArrayRequired.sort()) ) {
+    throw new Error("image is required");
+  }
+  return true;
+};
+
+exports.specificAnyImagesRequired = (val, req,path,specificKey) => {
+  const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
+  const index = match ? parseInt(match[1], 10) : null;
+
+  // get obj of req.files that only belong to this index 
+  // mean if im inn index one i wil get obj that have key[0] only 
+  // because i need to check for each index so if for example imageCover required i need to check if its there in index 0 and index 1 ...
+  //if i dont do that then i you send imageCover in index 0 and dont in 1 then will not give you error because its exits in index 0 
+  const filesBelongsToCurrentIndex = req.files.filter((file)=> file.fieldname.includes(index))
+  
+
+
+  
+   // edit fieldname in req.files and get name of keys for example fieldname : variant[0][images]
+   const newReqFiles = filesBelongsToCurrentIndex.map((file)=> file.fieldname.split("[")[2].slice(0,-1))
+   // delete repeat
+   const allAnySet = new Set(newReqFiles);
+  const allAnyArray = [...allAnySet]
+  
+  if (req.files.length === 0 || !allAnyArray.includes(specificKey) ) {
+    throw new Error("image is required");
+  }
+  return true;
+};
+
+
+
 exports.validateTypeDiscriminator = (val, req) => {
   const validSubCategories = ["women", "men", "phone", "laptop"];
   if (!validSubCategories.includes(val)) {
@@ -435,55 +576,20 @@ exports.validateTypeDiscriminator = (val, req) => {
   return true;
 };
 
-exports.checkIfIsSaleExit = (val, req, path) => {
-  const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
-  const index = match ? parseInt(match[1], 10) : null;
-  const currentVariant = req.body.variant[index];
 
-  if (currentVariant.isSale === "true" && (!currentVariant.saleEndDate || !currentVariant.discountType || !currentVariant.discountValue) ) {
-    throw new Error("As you choose sale discount you must enter saleEndDate , discountType and discountValue");
-    
+
+exports.checkDiscountPercentage = (val, req, path) => {
+
+  if (
+    req.body.discountType === "percentage" &&
+    (req.body.discountValue > 100 || req.body.discountValue < 0)
+  ) {
+    throw new Error("percentage discount value must be between 0 and 100");
   }
+
   return true;
 };
 
-// exports.checkDiscountValue = (val, req, path) => {
-//   const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
-//   const index = match ? parseInt(match[1], 10) : null;
-//   const currentVariant = req.body.variant[index];
-
-//   if (
-//     currentVariant.discountType === "fixed" &&
-//     currentVariant.discountValue > currentVariant.price
-//   ) {
-//     throw new Error("price after discount must be less than price");
-//   }
-//   if (
-//     currentVariant.discountType === "percentage" &&
-//     (currentVariant.discountValue > 100 || currentVariant.discountValue < 0)
-//   ) {
-//     throw new Error("percentage discount value must be between 0 and 100");
-//   }
-
-//   return true;
-// };
-
-// exports.checkDiscountValueForUpdate = (val, req) => {
-//   if (
-//     req.body.variant.discountType === "fixed" &&
-//     req.body.variant.discountValue > req.body.variant.price
-//   ) {
-//     throw new Error("price after discount must be less than price");
-//   }
-//   if (
-//     req.body.variant.discountType === "percentage" &&
-//     (req.body.variant.discountValue > 100 || req.body.variant.discountValue < 0)
-//   ) {
-//     throw new Error("percentage discount value must be between 0 and 100");
-//   }
-
-//   return true;
-// };
 
 exports.validateOption = (val, req) => {
   const option = [
@@ -512,8 +618,8 @@ exports.validateOption = (val, req) => {
   return true;
 };
 
-exports.ensureStartDateLessThanExpireDate = (val, req) => {
-  const expireDate = new Date(req.body.expire).getTime();
+exports.ensureStartDateLessThanExpireDate = (val, req,dateExpired) => {
+  const expireDate = new Date(req.body[dateExpired]).getTime();
   const startDate = new Date(val).getTime();
 
   if (expireDate <= startDate) {
@@ -522,6 +628,27 @@ exports.ensureStartDateLessThanExpireDate = (val, req) => {
 
   return true;
 };
+
+
+exports.ensureStartDateLessThanExpireDateInArray = (val, req,path,dateExpired) => {
+
+  const match = path.match(/\[(\d+)\]/); // Extracts the number inside the square brackets
+  const index = match ? parseInt(match[1], 10) : null;
+  const currentBanner = req.body.bannerDetails[index];
+  
+
+  const startDate = new Date(val).getTime();
+  
+  const expireDate = new Date(currentBanner[dateExpired]).getTime();
+
+ 
+  if (expireDate <= startDate) {
+    throw new Error("start Date must be less than expire Date");
+  }
+
+  return true;
+};
+
 
 
 exports.ensureNoFreeShippingForAll = (val, req) => {

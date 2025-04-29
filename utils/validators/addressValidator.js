@@ -1,11 +1,8 @@
 const { check } = require("express-validator");
 const { validatorMiddleware } = require("../../middlewares/validatorMiddleware");
-const User = require("../../models/userModel");
 const Country = require("../../models/countryModel");
 const Address = require("../../models/addressModel");
 const {
-  ensureSubDocumentExistsById,
-  ensureUniqueSubModelValueSingleObject,
   ensureUniqueDefaultUser,
   ensureDocumentExistsById,
   validateUserOwnership,

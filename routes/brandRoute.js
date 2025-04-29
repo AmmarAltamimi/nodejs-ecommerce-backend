@@ -8,9 +8,7 @@ const {
   updateBrand,
   deleteBrand,
   getBrand,
-  uploadBrandImage,
-  uploadBrandImageToCloudinary,
-} = require("../services/brandService ");
+  uploadBrandImage,} = require("../services/brandService ");
 
 const {
   createBrandValidator,
@@ -18,11 +16,10 @@ const {
   deleteBrandValidator,
   getBrandValidator,
 } = require("../utils/validators/brandValidator ");
-const {
-  validateActualTypeAndCleanFileSingleImage,
-} = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
+const {  validateSingleFileTypeDisk,uploadSingleImageToCloudinaryDisk } = require("../middlewares/uploadImageMiddleware");
+
 
 router
   .route("/")
@@ -32,8 +29,8 @@ router
     allowedTo("admin"),
     uploadBrandImage,
     createBrandValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadBrandImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("brand","auto",600,600,"fill"),
     createBrand
   );
 router
@@ -43,8 +40,8 @@ router
     allowedTo("admin"),
     uploadBrandImage,
     updateBrandValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadBrandImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("brand","auto",600,600,"fill"),
     updateBrand
   )
   .delete(protect, allowedTo("admin"), deleteBrandValidator, deleteBrand)

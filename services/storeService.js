@@ -1,6 +1,4 @@
-const fs = require("fs");
 const asyncHandler = require("express-async-handler");
-const { v4: uuidv4 } = require("uuid");
 const Store = require("../models/storeModel");
 const {
   getAll,
@@ -9,8 +7,7 @@ const {
   updateOne,
   deleteOne,
 } = require("../middlewares/handlersFactoryMiddleware");
-const { uploadMixOfImages } = require("../middlewares/uploadImageMiddleware");
-const cloudinary = require("../utils/cloudinary");
+const { uploadFieldsImages } = require("../middlewares/uploadImageMiddleware");
 const ApiError = require("../utils/apiError");
 const User = require("../models/userModel");
 
@@ -24,156 +21,21 @@ exports.setUserIdToBody = asyncHandler((req, res, next) => {
 });
 
 
-exports.uploadStoreImage =  uploadMixOfImages("stores", [
+exports.uploadStoreImage =  uploadFieldsImages("stores", [
   { name: "imageCover", maxCount: 1 },
-  { name: "images", maxCount: 1 },
+  { name: "images", maxCount: 3 },
 ]);
 
 
-exports.uploadStoreImagesToCloudinary =
-  (Name = false) =>
-  async (req, res, next) => {
-    // if updated  key not image so no req.file will be founded
-    if (!req.files) {
-      return next();
-    }
-
-    if (Name && req.body[Name] && req.body[Name].length > 0) {
-      await Promise.all(
-        req.body[Name].map(async (item, i) => {
-          const singleImage = req.files[`${Name}[${i}][imageCover]`];
-          const mixImage = req.files[`${Name}[${i}][images]`];
-
-          if (singleImage) {
-            try {
-              const customFileName = `store-${uuidv4()}-${Date.now()}-imageCover`; // You can create your own naming scheme
-
-              const result = await cloudinary.uploader.upload(
-                singleImage[0].path,
-                {
-                  folder: "stores", // Optional: specify folder in Cloudinary
-                  public_id: customFileName, // Set the custom name for the image
-                  quality: "auto", // Optional: set quality
-                  width: 600, // Optional: resize image width
-                  height: 600, // Optional: resize image height
-                  crop: "fill", // Optional: crop the image
-                }
-              );
-
-              req.body[Name][i].imageCover = {
-                url: result.secure_url,
-                public_id: result.public_id,
-              };
-            } catch (err) {
-              fs.unlinkSync(singleImage[0].path); // Remove local file after successful upload
-              throw new ApiError(
-                `Failed to upload  to cloudinary ${err.message}`,
-                500
-              );
-            }
-          }
-
-          if (mixImage) {
-            req.body[Name][i].images = [];
-            await Promise.all(
-              mixImage.map(async (image) => {
-                try {
-                  const customFileName = `store-${uuidv4()}-${Date.now()}`; // You can create your own naming scheme
-                  const result = await cloudinary.uploader.upload(image.path, {
-                    folder: "stores", // Optional: specify folder in Cloudinary
-                    public_id: customFileName, // Set the custom name for the image
-                    quality: "auto", // Optional: set quality
-                    width: 600, // Optional: resize image width
-                    height: 600, // Optional: resize image height
-                    crop: "fill", // Optional: crop the image
-                  });
-
-                  req.body[Name][i].images.push({
-                    url: result.secure_url,
-                    public_id: result.public_id,
-                  });
-                } catch (err) {
-                  fs.unlinkSync(image.path); // Remove local file after successful upload
-                  throw new ApiError(
-                    `Failed to upload  to cloudinary ${err.message}`,
-                    500
-                  );
-                }
-              })
-            );
-          }
-        })
-      );
-    } else {
-      if (req.files.imageCover) {
-        
-        try {
-          const customFileName = `store-${uuidv4()}-${Date.now()}-imageCover`; // You can create your own naming scheme
-
-          
-          const result = await cloudinary.uploader.upload(
-            req.files.imageCover[0].path,
-            {
-              folder: "stores", // Optional: specify folder in Cloudinary
-              public_id: customFileName, // Set the custom name for the image
-              quality: "auto", // Optional: set quality
-              width: 600, // Optional: resize image width
-              height: 600, // Optional: resize image height
-              crop: "fill", // Optional: crop the image
-            }
-          );
-
-          req.body.imageCover = {
-            url: result.secure_url,
-            public_id: result.public_id,
-          };
-        } catch (err) {
-          fs.unlinkSync(req.files.imageCover[0].path); // Remove local file after successful upload
-          throw new ApiError(
-            `Failed to upload  to cloudinary ${err.message}`,
-            500
-          );
-        }
-      }
-
-      if (req.files.images) {
-        req.body.images = [];
-        await Promise.all(
-          req.files.images.map(async (image) => {
-            try {
-              const customFileName = `store-${uuidv4()}-${Date.now()}`; // You can create your own naming scheme
-              const result = await cloudinary.uploader.upload(image.path, {
-                folder: "stores", // Optional: specify folder in Cloudinary
-                public_id: customFileName, // Set the custom name for the image
-                quality: "auto", // Optional: set quality
-                width: 600, // Optional: resize image width
-                height: 600, // Optional: resize image height
-                crop: "fill", // Optional: crop the image
-              });
-
-              req.body.images.push({
-                url: result.secure_url,
-                public_id: result.public_id,
-              });
-            } catch (err) {
-              fs.unlinkSync(image.path); // Remove local file after successful upload
-              throw new ApiError(
-                `Failed to upload  to cloudinary ${err.message}`,
-                500
-              );
-            }
-          })
-        );
-      }
-    }
-
-    next();
-  };
-
-
-
-  exports.createFilterObj = async (req, res, next) => {    
+  exports.createFilterObj = async (req, res, next) => {  
+    if(req.user.role === "user"){
       req.filterObj = { followingUser: req.user._id };
+    }  
+
+    if(req.user.role === "seller"){
+      req.filterObj = { user: req.user._id };
+
+    }
     
     next();
   };
@@ -200,7 +62,7 @@ exports.updateStore = updateOne(Store);
 exports.deleteStore = deleteOne(Store);
 
 // @desc    Get specific store by id
-// @route   GET /api/v1/store/:id
+// @route   GET /api/v1/store/:slug
 // @access  Public
 exports.getStore = getOne(Store);
 

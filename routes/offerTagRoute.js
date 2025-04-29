@@ -36,7 +36,7 @@ router
     updateOfferTagValidator,
     updateOfferTag
   )
-  .delete(protect, allowedTo("admin"), deleteOfferTagValidator, deleteOfferTag)
+  .delete(protect, allowedTo("admin","seller"), deleteOfferTagValidator, deleteOfferTag)
   .get(getOfferTagValidator, getOfferTag);
 
 module.exports = router;

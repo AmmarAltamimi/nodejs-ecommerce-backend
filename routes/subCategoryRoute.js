@@ -11,7 +11,6 @@ const {
   updateSubCategory,
   deleteSubCategory,
   uploadSubCategoryImage,
-  uploadSubCategoryImageToCloudinary,
 } = require("../services/subCategoryService");
 const {
   createSubCategoryValidator,
@@ -22,7 +21,7 @@ const {
   validatorCategoryIdForSpecificSubcategory,
 } = require("../utils/validators/subCategoryValidator");
 const {
-  validateActualTypeAndCleanFileSingleImage,
+  validateSingleFileTypeDisk,uploadSingleImageToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
@@ -41,8 +40,8 @@ router
     setCategoryIdToBody, // create subCategory for specific category
     uploadSubCategoryImage,
     createSubCategoryValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadSubCategoryImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("subcategory","auto",600,600,"fill"),
     createSubCategory
   );
 router
@@ -53,8 +52,8 @@ router
     validatorCategoryIdForSpecificSubcategory, // validate Category id in params and Category id is equal to category id in subcategory
     uploadSubCategoryImage,
     updateSubCategoryValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadSubCategoryImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("subcategory","auto",600,600,"fill"),
     updateSubCategory
   )
   .delete(

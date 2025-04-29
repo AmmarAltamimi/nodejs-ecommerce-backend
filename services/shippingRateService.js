@@ -62,6 +62,10 @@ exports.getShippingRate = asyncHandler(async (req, res, next) => {
   const {id} = req.params
 
  const countries = await Country.find(); 
+ if(!countries){
+  return next(new ApiError(`countries not found`, 404));
+}
+
  const shippingRate = await ShippingRate.find({store:id});
 
 

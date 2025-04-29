@@ -5,16 +5,13 @@ const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
 const {
-  getReviews,
   createReview,
   updateReview,
   deleteReview,
   getReview,
   updateLikesReview,
-  createFilterObj,
   setProductIdAndUserIdToBody,
   uploadReviewImage,
-  uploadReviewImagesToCloudinary,
 } = require("../services/reviewService");
 const {
   createReviewValidator,
@@ -23,9 +20,9 @@ const {
   getReviewValidator,
   updateLikesReviewValidator,
   validatorProductId,
-} = require("../utils/validators/reviewValidator   ");
+} = require("../utils/validators/reviewValidator");
 const {
-  validateActualTypeAndCleanFileMixOfImages,
+  validateArrayFileTypeAnyFileTypeDisk,uploadArrayImagesToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 
 
@@ -34,7 +31,6 @@ const {
 
 // i use virtual to get reviews that belongs to its product so i dont need to make its router 
 // also there is in my dashboard need to get reviews belongs to specific user or specific product
-
   // .route("/")
   // .get(
   //   protect,
@@ -44,6 +40,7 @@ const {
   //   getReviews
   // )
   
+
   router.route("/").post(
     protect,
     allowedTo("user"),
@@ -51,8 +48,8 @@ const {
     validatorProductId, // validate product id in params
     setProductIdAndUserIdToBody, // create Reviews for specific product or  create Reviews for My user
     createReviewValidator,
-    validateActualTypeAndCleanFileMixOfImages(false),
-    uploadReviewImagesToCloudinary(false),
+    validateArrayFileTypeAnyFileTypeDisk,
+    uploadArrayImagesToCloudinaryDisk("review","auto",600,600,"fill"),
     createReview
   );
 router
@@ -62,8 +59,8 @@ router
     allowedTo("user"),
     uploadReviewImage,
     updateReviewValidator,
-     validateActualTypeAndCleanFileMixOfImages(false),
-     uploadReviewImagesToCloudinary(false),
+    validateArrayFileTypeAnyFileTypeDisk,
+    uploadArrayImagesToCloudinaryDisk("review","auto",600,600,"fill"),
     updateReview
   )
   .delete(

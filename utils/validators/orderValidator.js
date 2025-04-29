@@ -38,15 +38,13 @@ exports.orderValidator = [
         )
         .custom(async (orderId, { req }) =>
           validateReferenceOwnership(orderId, req, Order,"shippingAddress")
-        ),
+        )
+        ,
   validatorMiddleware,
 ];
 
 exports.updateGroupOrderValidator = [
   check("groupId").isMongoId().withMessage("Invalid group id format")
-  .custom(async (groupId, { req }) =>
-    validateReferenceOwnership(groupId, req, GroupOrder,"order")
-  )
   .custom(async (groupId, { req }) =>
     validateReferenceOwnership(groupId, req, GroupOrder,"store")
   ),
@@ -55,9 +53,7 @@ exports.updateGroupOrderValidator = [
 
 exports.updateItemOrderValidator = [
   check("groupId").isMongoId().withMessage("Invalid group id format")
-  .custom(async (groupId, { req }) =>
-    validateReferenceOwnership(groupId, req, GroupOrder,"order")
-  )
+
   .custom(async (groupId, { req }) =>
     validateReferenceOwnership(groupId, req, GroupOrder,"store")
   ),
@@ -67,3 +63,8 @@ exports.updateItemOrderValidator = [
 
 
 
+exports.cancelledOrderValidator = [
+  check("groupId").isMongoId().withMessage("Invalid group id format"),
+  check("itemId").isMongoId().withMessage("Invalid item id format"),
+  validatorMiddleware,
+];

@@ -5,7 +5,7 @@ const Store = require("../../models/storeModel");
 const {
   ensureUniqueModelValue,
   setSlug,
-  checkStoreImages,
+  allFieldsImagesRequired,
   ensureDocumentExistsById,
   validateUserOwnership,
   isTimeMinLessThanTimeMax
@@ -47,11 +47,9 @@ exports.createStoreValidator = [
       "Invalid phone number only accepted YE,Egy and SA Phone numbers"
     ),
   check("imageCover").custom((val, { req }) =>
-    checkStoreImages(val, req)
+    allFieldsImagesRequired(val, req,["imageCover","images"])
   ),
-  check("images").custom((val, { req }) =>
-    checkStoreImages(val, req)
-  ),
+
   check("defaultDeliveryTimeMin").optional().isFloat()
   .custom((val, { req }) => isTimeMinLessThanTimeMax(val, req)),
 
@@ -120,7 +118,7 @@ exports.deleteStoreValidator = [
 ];
 
 exports.getStoreValidator = [
-  check("id").isMongoId().withMessage("Invalid Store id format"),
+  check("slug").notEmpty().withMessage("slug is required"),
   validatorMiddleware,
 ];
 

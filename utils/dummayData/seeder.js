@@ -1,7 +1,9 @@
 const fs = require("fs");
 require("colors");
 const dotenv = require("dotenv");
-const Country = require("../../models/countryModel");
+const Footer = require("../../models/footerModel")
+// const Banner = require("../../models/bannerModel")
+// const HomepageSettings = require("../../models/homePageSettingsModel");
 // const Category = require('../models/categoryModel');
 // const SubCategory = require('../models/subCategoryModel');
 // const Brand = require('../models/brandModel');
@@ -13,12 +15,12 @@ dotenv.config({ path: "../../config.env" });
 dbConnection();
 
 // Read data
-const country = JSON.parse(fs.readFileSync("./countries.json"));
+const footer = JSON.parse(fs.readFileSync("./footer.json"));
 
 // Insert data into DB
 const insertData = async () => {
   try {
-    await Country.create(country);
+    await Footer.create(footer);
 
     console.log("Data Inserted".green.inverse);
     process.exit();
@@ -30,7 +32,7 @@ const insertData = async () => {
 // Delete data from DB
 const destroyData = async () => {
   try {
-    await Country.deleteMany();
+    await Footer.deleteMany();
     console.log("Data Destroyed".red.inverse);
     process.exit();
   } catch (error) {

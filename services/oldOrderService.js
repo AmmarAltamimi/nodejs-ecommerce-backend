@@ -9,9 +9,7 @@
 
 // const ApiError = require("../utils/apiError");
 
-
-
-// // after create the order there are some things you have to do such as (increase product sold and decrease qtyStock )  and  clear cart 
+// // after create the order there are some things you have to do such as (increase product sold and decrease qtyStock )  and  clear cart
 // const afterOrderCreated = async(createOrder,cart,cartId)=>{
 //   if (createOrder) {
 
@@ -19,7 +17,7 @@
 //     const bulkOption = await Promise.all(
 //       cart.cartItem.map(async (item) => {
 //         const product = await Product.findById(item.product);
-    
+
 //         return {
 //           updateOne: {
 //             filter: { _id: item.product, subcategoryType: product.subcategoryType }, // Match the product
@@ -30,26 +28,20 @@
 //               },
 //             },
 //             arrayFilters: [
-//               { "objFilter._id": item.variantId }, // Match array elements by ID
+//               { "objFilter._id": item.variant }, // Match array elements by ID
 //             ],
 //           },
 //         };
 //       })
 //     );
 
-  
-
 // await Product.bulkWrite(bulkOption, {});
 
-
-
-    
 //     // clear cart
 //     await Cart.findByIdAndDelete(cartId);
 //   }
 
 // }
-
 
 // // Nested route (get)
 // exports.createFilterObj = async (req, res, next) => {
@@ -62,8 +54,6 @@
 //   next();
 // };
 
-
-
 // // @desc    Get all orders
 // // @route   POST /api/v1/orders
 // // @access  Protected/User-Admin-Manager
@@ -73,7 +63,6 @@
 // // @route   POST /api/v1/orders/:orderId
 // // @access  Protected/Admin-Manager
 // exports.getOrder = getOne(Order);
-
 
 // // @desc    create cash order
 // // @route   POST /api/v1/orders/cartId
@@ -113,7 +102,6 @@
 //     });
 // });
 
-
 // // @desc    Update order paid status to paid
 // // @route   PUT /api/v1/orders/:id/pay
 // // @access  Protected/Admin-Manager
@@ -140,7 +128,6 @@
 //     });
 // });
 
-
 // // @desc    Update order delivered status
 // // @route   PUT /api/v1/orders/:id/deliver
 // // @access  Protected/Admin-Manager
@@ -166,8 +153,6 @@
 //       data: updateOrder,
 //     });
 // });
-
-
 
 // // @desc    Get checkout session from stripe and send it as response
 // // @route   GET /api/v1/orders/checkout-session/cartId
@@ -212,8 +197,6 @@
 //   res.status(200).json({ status: "success", session: session });
 // });
 
-
-
 // const createCardOrder = async (session, req, res, next) => {
 //   const {
 //     client_reference_id: cartId,
@@ -242,8 +225,6 @@
 
 // };
 
-
-
 // // @desc    This webhook will run when stripe payment success paid
 // // @route   POST /webhook-checkout
 // // @access  Protected/User
@@ -265,7 +246,7 @@
 //     //  Create order
 //     createCardOrder(event.data.object, req, res, next);
 //   }
-  
+
 //   return res.status(200).json({ received: true });
 
 // });

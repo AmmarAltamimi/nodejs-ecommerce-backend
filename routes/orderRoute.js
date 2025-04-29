@@ -6,34 +6,31 @@ const {
   createFilterObj,
   groupFilterObj,
   getMyOrders,
+  cancelledOrder,
   createOrder,
-  updateOrderStatus,
+  cancelledOrderItem,
   updateGroupOrderStatus,
   updateItemOrderStatus,
   getGroupOrder,
-  getOrderDetails
+  getOrderDetails,
 } = require("../services/orderService");
 const {
-createOrderValidator,
-orderValidator,
-storeGroupValidator,
-updateGroupOrderValidator,
-updateItemOrderValidator,
-} = require("../utils/validators/orderValidator  ");
+  createOrderValidator,
+  orderValidator,
+  cancelledOrderValidator,
+  storeGroupValidator,
+  updateGroupOrderValidator,
+  updateItemOrderValidator,
+} = require("../utils/validators/orderValidator");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
 router
   .route("/")
-  .get(
-    protect,
-    allowedTo("user"),
-    createFilterObj, 
-    getMyOrders
-  )
+  .get(protect, allowedTo("user"), createFilterObj, getMyOrders)
   .post(protect, allowedTo("user"), createOrderValidator, createOrder);
 
-  router
+router
   .route("/groupedOrder")
   .get(
     protect,
@@ -41,40 +38,36 @@ router
     groupFilterObj,
     storeGroupValidator,
     getGroupOrder
-  )
+  );
 
-  router
+router
   .route("/:id")
-  .get(
-    protect,
-    allowedTo("user"),
-    orderValidator,
-    getOrderDetails
-  )
+  .get(protect, allowedTo("user"), orderValidator, getOrderDetails)
+  .put(protect, allowedTo("user"), orderValidator, cancelledOrder);
 
-  router.put(
-    "/:id/updateOrderStatus",
-    protect,
-    allowedTo("seller"),
-    orderValidator,
-    updateOrderStatus
-  );
-  
+
+
 router.put(
-    "/:groupId/updateGroupOrderStatus",
-    protect,
-    allowedTo("seller"),
-    updateGroupOrderValidator,
-    updateGroupOrderStatus
-  );
-  
+  "/:groupId/updateGroupOrderStatus",
+  protect,
+  allowedTo("seller"),
+  updateGroupOrderValidator,
+  updateGroupOrderStatus
+);
+
 router.put(
-    "/:groupId/:itemId/updateItemOrderStatus",
-    protect,
-    allowedTo("seller"),
-    updateItemOrderValidator,
-    updateItemOrderStatus
-  );
+  "/:groupId/:itemId/updateItemOrderStatus",
+  protect,
+  allowedTo("seller"),
+  updateItemOrderValidator,
+  updateItemOrderStatus
+);
 
-
+router.put(
+  "/:groupId/:itemId/cancelledOrderItem",
+  protect,
+  allowedTo("user"),
+  cancelledOrderValidator,
+  cancelledOrderItem
+);
 module.exports = router;

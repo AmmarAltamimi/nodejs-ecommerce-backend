@@ -5,6 +5,8 @@ const Order = require("./paymentDetailsModel");
 const Store = require("./storeModel");
 const Review = require("./reviewModel");
 const Address = require("./addressModel");
+const PaymentDetails = require("./paymentDetailsModel");
+const CouponUsage = require("./couponUsageModel");
 const cloudinary = require("../utils/cloudinary");
 
 const userSchema = new mongoose.Schema(
@@ -113,6 +115,8 @@ userSchema.pre("findOneAndDelete", async function (next) {
     await Review.deleteMany({ user: user._id });
     await Store.deleteMany({ user: user._id });
     await Address.deleteMany({ user: user._id });
+    await CouponUsage.deleteMany({ user: user._id });
+    await PaymentDetails.deleteMany({ user: user._id });
   }
   next();
 });

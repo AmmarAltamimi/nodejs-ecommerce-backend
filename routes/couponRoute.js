@@ -8,6 +8,8 @@ const {
   updateCoupon,
   deleteCoupon,
   getCoupon,
+  getStoreCoupons,
+  createFilterObj
 } = require("../services/couponService");
 
 const {
@@ -15,13 +17,14 @@ const {
   updateCouponValidator,
   deleteCouponValidator,
   getCouponValidator,
+  getStoreCouponsValidator,
 } = require("../utils/validators/couponValidator");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
 
 router
   .route("/")
-  .get(protect, allowedTo("seller"), getCoupons)
+  .get(protect, allowedTo("admin"), getCoupons)
   .post(
     protect,
     allowedTo("seller"),
@@ -43,5 +46,8 @@ router
     deleteCoupon
   )
   .get(protect, allowedTo("seller"), getCouponValidator, getCoupon);
+
+  router.route("/:storeId/store-coupon").get(protect, allowedTo("seller"), getStoreCouponsValidator,createFilterObj, getStoreCoupons);
+
 
 module.exports = router;

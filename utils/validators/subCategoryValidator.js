@@ -6,7 +6,7 @@ const {
   ensureUniqueModelValue,
   setSlug,
   ensureDocumentExistsById,
-  checkSingleImage,
+  singleImageRequired,
   validateOwnership,
 } = require("./customValidator");
 
@@ -47,7 +47,7 @@ exports.createSubCategoryValidator = [
     .isMongoId()
     .withMessage("Invalid category id format")
     .custom((val, {req}) => ensureDocumentExistsById(val, req, Category)),
-  check("image").custom((val, { req }) => checkSingleImage(val, req)),
+  check("image").custom((val, { req }) => singleImageRequired(val, req)),
 
   validatorMiddleware,
 ];

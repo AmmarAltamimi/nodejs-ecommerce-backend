@@ -4,7 +4,7 @@ const Brand = require("../../models/brandModel");
 const {
   ensureUniqueModelValue,
   setSlug,
-  checkSingleImage,
+  singleImageRequired,
   ensureDocumentExistsById,
   ensureDocumentBelongToParent,
   ensureAllDocumentsExistByIds,
@@ -23,7 +23,7 @@ exports.createBrandValidator = [
     .withMessage("too long brand name")
     .custom((val, { req }) => ensureUniqueModelValue(val, req,false, Brand,{name:val}))
     .custom((val, { req }) => setSlug(val, req,Brand)),
-  check("image").custom((val, { req }) => checkSingleImage(val, req)),
+  check("image").custom((val, { req }) => singleImageRequired(val, req)),
   check("category")
     .notEmpty()
     .withMessage("category required")

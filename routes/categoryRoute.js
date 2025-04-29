@@ -9,7 +9,6 @@ const {
   deleteCategory,
   getCategory,
   uploadCategoryImage,
-  uploadCategoryImageToCloudinary,
 } = require("../services/categoryService");
 
 const {
@@ -19,7 +18,7 @@ const {
   getCategoryValidator,
 } = require("../utils/validators/categoryValidator");
 const {
-  validateActualTypeAndCleanFileSingleImage,
+  validateSingleFileTypeDisk,uploadSingleImageToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
@@ -37,8 +36,8 @@ router
     allowedTo("admin"),
     uploadCategoryImage,
     createCategoryValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadCategoryImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("category","auto",600,600,"fill"),
     createCategory
   );
 router
@@ -48,8 +47,8 @@ router
     allowedTo("admin"),
     uploadCategoryImage,
     updateCategoryValidator,
-    validateActualTypeAndCleanFileSingleImage,
-    uploadCategoryImageToCloudinary,
+    validateSingleFileTypeDisk,
+    uploadSingleImageToCloudinaryDisk("category","auto",600,600,"fill"),
     updateCategory
   )
   .delete(protect, allowedTo("admin"), deleteCategoryValidator, deleteCategory)

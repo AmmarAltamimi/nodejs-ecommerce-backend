@@ -9,7 +9,6 @@ const {
   deleteStore,
   getStore,
   uploadStoreImage,
-  uploadStoreImagesToCloudinary,
   setUserIdToBody,
   createFilterObj,
   getLoggedUserFollowedStores,
@@ -26,10 +25,18 @@ const {
   updateFollowingUserValidator
 } = require("../utils/validators/storeValidator");
 const {
-  validateActualTypeAndCleanFileMixOfImages,
+  validateFieldsFileTypeDisk,uploadFieldsImagesToCloudinaryDisk
 } = require("../middlewares/uploadImageMiddleware");
 const { protect } = require("../middlewares/protectMiddleware");
 const { allowedTo } = require("../middlewares/allowedToMiddleware");
+
+// for fields Cloudinary
+const fieldType = {
+  "imageCover" : "single",
+  "images" : "multi"
+}
+
+
 
 // route get store belongs to specific user : i will get them by query not by nested router (both ways correct)
 
@@ -42,11 +49,18 @@ router
     uploadStoreImage,
     setUserIdToBody,
     createStoreValidator,
-    validateActualTypeAndCleanFileMixOfImages(false),
-    uploadStoreImagesToCloudinary(false),
+    validateFieldsFileTypeDisk,
+    uploadFieldsImagesToCloudinaryDisk("store","auto",600,600,"fill",fieldType),
     createStore
   );
   
+  router.get(
+    "/my-store",
+    protect,
+    allowedTo("seller"),
+    createFilterObj,
+    getLoggedUserFollowedStores
+  );
 router.get(
   "/followed-store",
   protect,
@@ -63,8 +77,8 @@ router
     allowedTo("seller"),
     uploadStoreImage,
     updateStoreValidator,
-    validateActualTypeAndCleanFileMixOfImages(false),
-    uploadStoreImagesToCloudinary(false),
+    validateFieldsFileTypeDisk,
+    uploadFieldsImagesToCloudinaryDisk("store","auto",600,600,"fill",fieldType),
     updateStore
   )
   .delete(
@@ -73,7 +87,7 @@ router
     deleteStoreValidator,
     deleteStore
   )
-  .get(getStoreValidator, getStore);
+  router.route("/:slug").get(getStoreValidator, getStore);
 
 
   router.put("/:id/following-user",

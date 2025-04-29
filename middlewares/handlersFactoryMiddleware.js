@@ -5,6 +5,8 @@ const ApiError = require("../utils/apiError");
 // Get all documents with filtering, sorting, pagination, and search features
 exports.getAll = (Model) =>
   asyncHandler(async (req, res) => {
+
+
     let filter = {};
     if (req.filterObj) {
       filter = req.filterObj;
@@ -71,6 +73,7 @@ exports.deleteOne = (Model) =>
       );
     }
 
+
     // Trigger "remove" event when update document
     await deletedDocument.remove();
 
@@ -80,7 +83,11 @@ exports.deleteOne = (Model) =>
 // Get a single document by ID
 exports.getOne = (Model, populationOpt) =>
   asyncHandler(async (req, res, next) => {
-    let query = Model.findById(req.params.id);
+    const paramsFilter = req.params.id
+      ? { _id: req.params.id }
+      : { slug: req.params.slug };
+
+    let query = Model.findOne(paramsFilter);
 
     if (populationOpt) {
       query = query.populate(populationOpt);
@@ -90,9 +97,13 @@ exports.getOne = (Model, populationOpt) =>
 
     if (!document) {
       return next(
-        new ApiError(`No ${Model.modelName} with id ${req.params.id}`, 404)
+        new ApiError(
+          `No ${Model.modelName} with  ${req.params.id || req.params.slug}`,
+          404
+        )
       );
     }
 
     res.status(200).json({ states: "success", data: document });
   });
+  

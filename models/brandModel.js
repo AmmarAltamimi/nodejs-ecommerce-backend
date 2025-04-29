@@ -29,7 +29,10 @@ const brandSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
     },
-
+    featured : {
+      type:Boolean,
+      default:false
+    },
     image:  {
       url: {type:String,required:true},       // The image URL you will use in your app
       public_id:{type:String,required:true},  // The public ID for future reference
