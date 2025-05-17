@@ -96,6 +96,38 @@ const userSchema = new mongoose.Schema(
           }
       },
     ],
+    history: [
+      {
+        product:{
+          type: mongoose.Schema.ObjectId,
+          ref: "Product",
+          },
+          variant:{
+            type: mongoose.Schema.ObjectId,
+          },
+          snapshot: {
+            productName:{
+              type: String,
+                },
+            variantName:{
+              type: String,
+                },
+            price: {
+              type: Number,
+              min: [0, "price cannot be negative"],
+            },
+            imageCover: {
+              url: { type: String, required: [true, "image URL required"] },
+              public_id: { type: String, required: [true, "image public ID required"] },
+            }
+          }, 
+          status: { 
+            type: String, 
+            enum: ['available', 'unavailable', 'out_of_stock'],
+            default: 'available'
+          }
+      },
+    ],
 
  
   },

@@ -52,6 +52,19 @@ exports.removeSpecificCartItemValidator = [
   validatorMiddleware,
 ];
 
+exports.removeMultiCartItemValidator = [
+  check("cartItemIds")
+   .notEmpty()
+  .withMessage("cartItemIds required")
+  .isArray()
+  .withMessage("cartItemIds is array"),
+  check("cartItemIds.*")
+  .isMongoId()
+  .withMessage("Invalid cartItem id format")
+  .custom(async (cartItemIds, { req }) => ensureSubDocumentExistsById(cartItemIds , req,Cart , {user:req.user._id},"cartItem")),
+  validatorMiddleware,
+];
+
 exports.applyCouponValidator = [
   check("name").notEmpty().withMessage("coupon name is required"),
   validatorMiddleware,

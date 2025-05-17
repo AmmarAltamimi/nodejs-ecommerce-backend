@@ -1,178 +1,177 @@
 {
-    "_id": "banner",
-    "bannerDetails": [
-      {
-        "title": "Banner 1",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111111/sample1.jpg",
-            "public_id": "sample1"
-          },
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111112/sample2.jpg",
-            "public_id": "sample2"
-          },
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111113/sample3.jpg",
-            "public_id": "sample3"
-          },
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111114/sample4.jpg",
-            "public_id": "sample4"
-          },
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111115/sample5.jpg",
-            "public_id": "sample5"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner1/link1",
-          "https://www.example.com/banner1/link2",
-          "https://www.example.com/banner1/link3",
-          "https://www.example.com/banner1/link4",
-          "https://www.example.com/banner1/link5"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111118/sample1_fallback.jpg",
-          "public_id": "sample1_fallback"
+  "_id": "banner",
+  "bannerDetails": [
+    {
+      "title": "Banner 1",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner1-1/640/480",
+          "public_id": "banner1_img1"
         },
-        "isActive": true,
-        "startDate": "04/12/2025",
-        "endDate": "04/20/2025"
+        {
+          "url": "https://picsum.photos/seed/banner1-2/640/480",
+          "public_id": "banner1_img2"
+        },
+        {
+          "url": "https://picsum.photos/seed/banner1-3/640/480",
+          "public_id": "banner1_img3"
+        },
+        {
+          "url": "https://picsum.photos/seed/banner1-4/640/480",
+          "public_id": "banner1_img4"
+        },
+        {
+          "url": "https://picsum.photos/seed/banner1-5/640/480",
+          "public_id": "banner1_img5"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner1/link1",
+        "https://www.example.com/banner1/link2",
+        "https://www.example.com/banner1/link3",
+        "https://www.example.com/banner1/link4",
+        "https://www.example.com/banner1/link5"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner1-fallback/640/480",
+        "public_id": "banner1_fallback"
       },
-      {
-        "title": "Banner 2",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111121/sample2.jpg",
-            "public_id": "sample2"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner2/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111122/sample2_fallback.jpg",
-          "public_id": "sample2_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/13/2025",
-        "endDate": "04/21/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 2",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner2-1/640/480",
+          "public_id": "banner2_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner2/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner2-fallback/640/480",
+        "public_id": "banner2_fallback"
       },
-      {
-        "title": "Banner 3",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111123/sample3.jpg",
-            "public_id": "sample3"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner3/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111124/sample3_fallback.jpg",
-          "public_id": "sample3_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/14/2025",
-        "endDate": "04/22/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 3",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner3-1/640/480",
+          "public_id": "banner3_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner3/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner3-fallback/640/480",
+        "public_id": "banner3_fallback"
       },
-      {
-        "title": "Banner 4",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111125/sample4.jpg",
-            "public_id": "sample4"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner4/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111126/sample4_fallback.jpg",
-          "public_id": "sample4_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/15/2025",
-        "endDate": "04/23/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 4",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner4-1/640/480",
+          "public_id": "banner4_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner4/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner4-fallback/640/480",
+        "public_id": "banner4_fallback"
       },
-      {
-        "title": "Banner 5",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111127/sample5.jpg",
-            "public_id": "sample5"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner5/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111128/sample5_fallback.jpg",
-          "public_id": "sample5_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/16/2025",
-        "endDate": "04/24/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 5",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner5-1/640/480",
+          "public_id": "banner5_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner5/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner5-fallback/640/480",
+        "public_id": "banner5_fallback"
       },
-      {
-        "title": "Banner 6",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111129/sample6.jpg",
-            "public_id": "sample6"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner6/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111130/sample6_fallback.jpg",
-          "public_id": "sample6_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/17/2025",
-        "endDate": "04/25/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 6",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner6-1/640/480",
+          "public_id": "banner6_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner6/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner6-fallback/640/480",
+        "public_id": "banner6_fallback"
       },
-      {
-        "title": "Banner 7",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111131/sample7.jpg",
-            "public_id": "sample7"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner7/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111132/sample7_fallback.jpg",
-          "public_id": "sample7_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/18/2025",
-        "endDate": "04/26/2025"
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 7",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner7-1/640/480",
+          "public_id": "banner7_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner7/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner7-fallback/640/480",
+        "public_id": "banner7_fallback"
       },
-      {
-        "title": "Banner 8",
-        "images": [
-          {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1611111133/sample8.jpg",
-            "public_id": "sample8"
-          }
-        ],
-        "links": [
-          "https://www.example.com/banner8/link"
-        ],
-        "fallBack": {
-          "url": "https://res.cloudinary.com/demo/image/upload/v1611111134/sample8_fallback.jpg",
-          "public_id": "sample8_fallback"
-        },
-        "isActive": true,
-        "startDate": "04/19/2025",
-        "endDate": "04/27/2025"
-      }
-    ]
-  }
-  
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    },
+    {
+      "title": "Banner 8",
+      "images": [
+        {
+          "url": "https://picsum.photos/seed/banner8-1/640/480",
+          "public_id": "banner8_img1"
+        }
+      ],
+      "links": [
+        "https://www.example.com/banner8/link"
+      ],
+      "fallBack": {
+        "url": "https://picsum.photos/seed/banner8-fallback/640/480",
+        "public_id": "banner8_fallback"
+      },
+      "isActive": true,
+      "startDate": "05/17/2025",
+      "endDate": "07/17/2025"
+    }
+  ]
+}

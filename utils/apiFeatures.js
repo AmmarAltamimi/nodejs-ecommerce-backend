@@ -139,7 +139,7 @@ class ApiFeature {
     if(this.queryString.keyword && this.queryString.subcategoryType){
 
         if(modelName === "Product"){
-             query = {$or:[{title:{$regex:this.queryString.keyword,$options:"i"}},{description:{$regex:this.queryString.keyword,$options:"i"}},{subcategoryType: this.queryString.subcategoryType,"variant.variantTitle":{$regex:this.queryString.keyword,$options:"i"}},{subcategoryType: this.queryString.subcategoryType,"variant.variantDescription":{$regex:this.queryString.keyword,$options:"i"}}]}
+             query = {$or:[{"variant.keywords":this.queryString.keyword},{title:{$regex:this.queryString.keyword,$options:"i"}},{description:{$regex:this.queryString.keyword,$options:"i"}},{subcategoryType: this.queryString.subcategoryType,"variant.variantTitle":{$regex:this.queryString.keyword,$options:"i"}},{subcategoryType: this.queryString.subcategoryType,"variant.variantDescription":{$regex:this.queryString.keyword,$options:"i"}}]}
 
         }else{
              query = {$or:[{name:{$regex:this.queryString.keyword,$options:"i"}}]}

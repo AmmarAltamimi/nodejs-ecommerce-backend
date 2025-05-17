@@ -8,6 +8,7 @@ const couponRouter = require("./couponRoute");
 const authRouter = require("./authRoute");
 const userRouter = require("./userRoute");
 const wishlistRouter = require("./wishlistRoute")
+const historyRouter = require("./historyRoute")
 const addressRouter = require("./addressRoute")
 const reviewRouter = require("./reviewRoute")
 const cartRouter = require("./cartRouter")
@@ -36,6 +37,7 @@ app.use("/api/v1/coupons",couponRouter);
 app.use("/api/v1/users",userRouter);
 app.use("/api/v1/auth",authRouter);
 app.use("/api/v1/wishlists",wishlistRouter);
+app.use("/api/v1/history",historyRouter);
 app.use("/api/v1/addresses",addressRouter);
 app.use("/api/v1/reviews",reviewRouter);
 app.use("/api/v1/carts",cartRouter);

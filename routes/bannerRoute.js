@@ -33,10 +33,7 @@ router
     allowedTo("admin"),
     uploadBannerImage,
     setBannerIdToParams,
-    (req,res,next)=>{console.log("1"); next()},
-
     updateBannerValidator,
-    (req,res,next)=>{console.log("2"); next()},
     validateArrayFileTypeAnyFileTypeDisk,
     uploadAnyImagesToCloudinaryDisk("banner","auto",600,600,"fill",fieldType),
     updateBanner

@@ -8,6 +8,7 @@ const {
   ensureDocumentExistsById,
   checkIfUserReviewedProduct,
   validateUserOwnership,
+  ensureSubDocumentExistsById
 } = require("./customValidator");
 
 exports.validatorProductId = [
@@ -46,6 +47,12 @@ exports.createReviewValidator = [
     .custom(async (productId, { req }) =>
       checkIfUserReviewedProduct(productId, req, Review)
     ),
+    check("variant")
+    .notEmpty()
+    .withMessage("variant required")
+    .isMongoId()
+    .withMessage("Invalid variant id format")
+    .custom((val, { req }) => ensureSubDocumentExistsById(val, req, Product,{_id:req.body.product},"variant")),
   validatorMiddleware,
 ];
 
@@ -76,6 +83,11 @@ exports.updateReviewValidator = [
     .custom(async (productId, { req }) =>
       checkIfUserReviewedProduct(productId, req, Review)
     ),
+    check("variant")
+    .optional()
+    .isMongoId()
+    .withMessage("Invalid variant id format")
+    .custom((val, { req }) => ensureSubDocumentExistsById(val, req, Product,{_id:req.body.product},"variant")),
   validatorMiddleware,
 ];
 

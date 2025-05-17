@@ -342,19 +342,22 @@ async function updateCartWithLatestForCheckout(cart) {
 // @route   GET /api/v1/cart
 // @access  Private/User
 const getLoggedUserCart = asyncHandler(async (req, res, next) => {
-  const cart = await Cart.findOne({ user: req.user._id }).populate({
+  let cart = await Cart.findOne({ user: req.user._id }).populate({
     path: "cartItem.product",
     select: "title description",
   });
 
-  const updatedCart = await updateCartWithLatest(cart);
+  if (cart) {
+    cart = await updateCartWithLatest(cart);
+    await cart.save();
+  }
+   
 
-  await updatedCart.save();
 
   res.status(200).json({
     status: "success",
-    numOfCartItems: updatedCart?.cartItem.length || 0,
-    data: updatedCart || [],
+    numOfCartItems: cart?.cartItem.length || 0,
+    data: cart || [],
   });
 });
 
@@ -367,14 +370,16 @@ const getLoggedUserCartForCheckout = asyncHandler(async (req, res, next) => {
     select: "title description",
   });
 
-  const updatedCart = await updateCartWithLatestForCheckout(cart);
-
-  await updatedCart.save();
+  if (cart) {
+    cart = await updateCartWithLatest(cart);
+    await cart.save();
+  }
+   
 
   res.status(200).json({
     status: "success",
-    numOfCartItems: updatedCart?.cartItem.length || 0,
-    data: updatedCart || [],
+    numOfCartItems: cart?.cartItem.length || 0,
+    data: cart || [],
   });
 });
 
@@ -609,6 +614,40 @@ const removeSpecificCartItem = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    remove Multi Cart Item
+// @route   DELETE /api/v1/cart/remove-multi-cartItem
+// @access  Private/User
+const removeMultiCartItem = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({user: req.user._id})
+  if (!cart) {
+    return next(
+      new ApiError(`cart with user id ${req.user._id} not found `, 404)
+    );
+  }
+
+  cart.cartItem = cart.cartItem.filter(
+    (cartItemObj) => !req.body.cartItemIds.includes(cartItemObj._id.toString())
+  );
+
+  // calculate TotalPrice and ShippingFees for total cartItem
+  const { subTotalValue, shippingFeesValue } =
+    calculateTotalPriceWithShippingFee(cart.cartItem);
+
+  cart.subTotal = subTotalValue;
+  cart.shippingFees = shippingFeesValue;
+  cart.total = subTotalValue + shippingFeesValue;
+
+  await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    numOfCartItems: cart.cartItem.length,
+    message: "multiItem removed successfully from cart",
+  });
+});
+
+
+
 // @desc    Apply coupon on logged user cart
 // @route   PUT /api/v1/cart/applyCoupon
 // @access  Private/User
@@ -692,4 +731,5 @@ module.exports = {
   removeSpecificCartItem,
   applyCoupon,
   removeCoupon,
+  removeMultiCartItem
 };

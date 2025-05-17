@@ -11,12 +11,14 @@ const {
   applyCoupon,
   getLoggedUserCartForCheckout,
   removeCoupon,
+  removeMultiCartItem
 } = require("../services/cartService");
 const {
   addProductToCartValidator,
   updateCartItemQuantityValidator,
   removeSpecificCartItemValidator,
   applyCouponValidator,
+  removeMultiCartItemValidator
 } = require("../utils/validators/cartValidator");
 
 const { protect } = require("../middlewares/protectMiddleware");
@@ -39,6 +41,10 @@ router
   router
   .route("/removeCoupon")
   .delete(protect, allowedTo("user"), removeCoupon);
+
+  router
+  .route("/remove-multi-cartItem")
+  .delete(protect, allowedTo("user"),removeMultiCartItemValidator, removeMultiCartItem);
 
 
 router

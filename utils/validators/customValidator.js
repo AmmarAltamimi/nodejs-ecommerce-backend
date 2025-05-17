@@ -212,6 +212,8 @@ exports.ensureAllDocumentsExistByIds = async (documentReceived, req, Model) => {
   return true;
 };
 
+
+
 exports.ensureSubDocumentExistsById = async (
   val,
   req,
@@ -219,6 +221,8 @@ exports.ensureSubDocumentExistsById = async (
   query,
   subModel
 ) => {
+  console.log(Model.modelName);
+  
   const document = await Model.findOne(query);
 
   if (!document) {
@@ -440,6 +444,7 @@ exports.MultipleCountryCodes = (val, validator) => {
 exports.checkIfUserReviewedProduct = async (productId, req, Model) => {
   const review = await Model.findOne({
     product: productId,
+    variant:req.body.variant,
     user: req.user._id,
   });
   if (review) {

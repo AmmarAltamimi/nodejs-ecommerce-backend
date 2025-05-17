@@ -30,6 +30,10 @@ const reviewSchema = new mongoose.Schema(
       ref: "Product",
       required: [true, "product required"],
     },
+    variant: {
+      type: mongoose.Schema.ObjectId,
+      required: [true, "varaint required"],
+    },
     images:[ {
       url: {type:String},      
       public_id:{type:String},  
