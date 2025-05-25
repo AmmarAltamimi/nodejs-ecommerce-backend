@@ -74,7 +74,7 @@ const updateOrderItemWithLatest = async (OrderItem) => {
 
       // this steps is important for this senario which is if varaint of of stock so we enter variant.stockQuantity === 0 condition and the state will be  "out_of_stock";
       // so if admin add stock to this variant then we will not enter any condition right but we dont update the statue so you should say i does not enter any condition then is available
-      cartItemObj.status = "available";
+      OrderItemObj.status = "available";
 
       return OrderItemObj; // Return the updated object
     })
